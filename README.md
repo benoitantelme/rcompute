@@ -5,7 +5,7 @@ Distributed computing in rust
 ## Project Roadmap
 
 - [x] **Phase 1** — Rust, Cargo and CI setup
-- [ ] **Phase 2** — Minimal orchestrator and workers
+- [x] **Phase 2** — Minimal orchestrator and workers
 - [ ] **Phase 3** — Orchestrator and worker setup: configuration, availability, treshold, ...
 - [ ] **Phase 4** — Worker discovery and lifecycle
 - [ ] **Phase 5** — Task management and lifecycle
