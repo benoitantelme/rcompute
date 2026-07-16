@@ -1,19 +1,18 @@
-use crate::components::orchestrator::Orchestrator;
 use std::fmt;
 
 pub struct Worker {
     pub id: u32,
     pub task: u32,
-    pub orchestrator: Orchestrator,
 }
 
 impl Worker {
-    pub fn new(id: u32, task: u32, orchestrator: Orchestrator) -> Self {
-        Self {
-            id: id,
-            task: task,
-            orchestrator: orchestrator,
-        }
+    pub fn new(id: u32, task: u32) -> Self {
+        Self { id: id, task: task }
+    }
+
+    pub fn calculate(&self) -> u32 {
+        println!("Worker id {} is calculating", self.id);
+        return 42;
     }
 }
 
