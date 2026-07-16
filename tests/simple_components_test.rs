@@ -29,11 +29,20 @@ mod components_test {
 
         assert_eq!(orchestrator.workers.len(), 4);
 
-        for n in 1..4 {
+        for n in 1..5 {
             let worker = orchestrator.workers.pop_front().unwrap();
             assert_eq!(worker.id, n);
             assert_eq!(worker.task, n);
             assert_eq!(worker.calculate(), 42);
         }
+
+        assert_eq!(orchestrator.workers.len(), 0);
+
+        orchestrator.workers.push_back(Worker::new(1, 1));
+        let worker = orchestrator.workers.pop_front().unwrap();
+        assert_eq!(worker.id, 1);
+        assert_eq!(worker.task, 1);
+        assert_eq!(worker.calculate(), 42);
+        assert_eq!(orchestrator.workers.len(), 0);
     }
 }
