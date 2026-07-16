@@ -1,6 +1,5 @@
-mod components;
-use crate::components::orchestrator::Orchestrator;
-use crate::components::worker::Worker;
+use rcompute::components::orchestrator::Orchestrator;
+use rcompute::components::worker::Worker;
 
 fn main() {
     println!("Hello, world!");
