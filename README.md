@@ -6,7 +6,7 @@ Distributed computing in rust
 
 - [x] **Phase 1** — Rust, Cargo and CI setup
 - [x] **Phase 2** — Minimal orchestrator and workers
-- [ ] **Phase 3** — Orchestrator and worker setup: configuration, availability, treshold, ...
+- [x] **Phase 3** — Orchestrator and worker setup: configuration, availability, threshold, ...
 - [ ] **Phase 4** — Worker discovery and lifecycle
 - [ ] **Phase 5** — Task management and lifecycle
 - [ ] **Phase 6** — Observability
