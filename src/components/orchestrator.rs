@@ -4,7 +4,7 @@ use std::fmt;
 
 pub struct Orchestrator {
     pub id: u32,
-    pub workers: VecDeque<Worker>,
+    workers: VecDeque<Worker>,
 }
 
 impl Orchestrator {
@@ -21,6 +21,22 @@ impl Orchestrator {
             worker.id, worker.task
         );
         (worker.id, worker.task, worker.calculate())
+    }
+
+    pub fn push_worker(&mut self, worker: Worker) {
+        println!("Adding worker {}", worker.id);
+        self.workers.push_back(worker);
+    }
+
+    pub fn pull_worker(&mut self) -> Worker {
+        let worker = self.workers.pop_front().unwrap();
+        println!("Pulling worker {}", worker.id);
+
+        worker
+    }
+
+    pub fn get_worker_queue_size(&mut self) -> usize {
+        self.workers.len()
     }
 }
 
