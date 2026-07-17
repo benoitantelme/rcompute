@@ -122,23 +122,24 @@ An inactive worker becomes active again when:
 
 A configurable parameter defines:
 
-- `minimumActiveWorkers`
+- `threshold`
 
-The orchestrator continuously compares the number of active workers to this threshold.
+The orchestrator continuously compares the number of active and available workers to this threshold.
 
 When:
 
 ```text
 activeWorkers < minimumActiveWorkers
+availableWorkers < minimumActiveWorkers
 ```
 
 the orchestrator must display:
 
 ```text
-Insufficient resources allocated.
+Insufficient available resources.
 ```
 
-The message is cleared when the active worker count meets or exceeds the threshold.
+A message is displayed when the available workers count meets or exceeds the threshold.
 
 ---
 
@@ -148,4 +149,5 @@ The system must support the following configuration parameters:
 
 - Orchestrator address (IP or hostname, will be a reference for the local version)
 - Task timeout
-- Minimum active worker threshold
+- Minimum available workers threshold
+- Initial workers count

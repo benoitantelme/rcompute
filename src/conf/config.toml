@@ -1,2 +1,2 @@
 orchestrator_workers_number = 10
-orchestrator_workers_threshold = 5 
+orchestrator_workers_threshold = 3 

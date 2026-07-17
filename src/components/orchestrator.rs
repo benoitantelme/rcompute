@@ -4,15 +4,34 @@ use std::fmt;
 
 pub struct Orchestrator {
     pub id: u32,
+    initial_capacity: usize,
+    pub threshold: u32,
+    pub low_capacity: bool,
     workers: VecDeque<Worker>,
 }
 
 impl Orchestrator {
-    pub fn new(id: u32, capacity: usize) -> Self {
+    pub fn new(id: u32, initial_capacity: usize, threshold: u32) -> Self {
         Self {
             id: id,
-            workers: VecDeque::with_capacity(capacity),
+            threshold: threshold,
+            initial_capacity: initial_capacity,
+            low_capacity: true,
+            workers: VecDeque::with_capacity(initial_capacity),
         }
+    }
+
+    pub fn initialise(&mut self) {
+        for n in 1..self.initial_capacity as u32 + 1 {
+            let worker = Worker::new(n, n);
+            self.push_worker(worker);
+        }
+
+        println!(
+            "Orchestrator {} initialised with {} workers",
+            self.id,
+            self.workers.len()
+        );
     }
 
     pub fn receive_result(&self, worker: Worker) -> (u32, u32, u32) {
@@ -26,11 +45,18 @@ impl Orchestrator {
     pub fn push_worker(&mut self, worker: Worker) {
         println!("Adding worker {}", worker.id);
         self.workers.push_back(worker);
+        if self.workers.len() >= self.threshold as usize {
+            self.low_capacity = false;
+        }
     }
 
     pub fn pull_worker(&mut self) -> Worker {
         let worker = self.workers.pop_front().unwrap();
         println!("Pulling worker {}", worker.id);
+
+        if self.workers.len() < self.threshold as usize {
+            self.low_capacity = true;
+        }
 
         worker
     }
