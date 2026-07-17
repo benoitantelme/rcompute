@@ -1,10 +1,12 @@
 use rcompute::components::orchestrator::Orchestrator;
 use rcompute::components::worker::Worker;
+use rcompute::config::app_config::AppConfig;
+
 
 fn main() {
-    println!("Hello, world!");
+    let config: AppConfig = AppConfig::new();
 
-    let orchestrator = Orchestrator::new(1, 10);
+    let orchestrator = Orchestrator::new(1, config.orchestrator_workers_number);
     println!("{}", orchestrator.to_string());
 
     let worker = Worker::new(1, 1);
