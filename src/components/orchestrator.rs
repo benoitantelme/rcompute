@@ -7,6 +7,7 @@ pub struct Orchestrator {
     initial_capacity: usize,
     pub threshold: u32,
     pub low_capacity: bool,
+    pub empty: bool,
     workers: VecDeque<Worker>,
 }
 
@@ -17,6 +18,7 @@ impl Orchestrator {
             threshold: threshold,
             initial_capacity: initial_capacity,
             low_capacity: true,
+            empty: true,
             workers: VecDeque::with_capacity(initial_capacity),
         }
     }
@@ -45,15 +47,22 @@ impl Orchestrator {
     pub fn push_worker(&mut self, worker: Worker) {
         println!("Adding worker {}", worker.id);
         self.workers.push_back(worker);
+
         if self.workers.len() >= self.threshold as usize {
             self.low_capacity = false;
         }
+        self.empty = false;
     }
 
     pub fn pull_worker(&mut self) -> Worker {
-        let worker = self.workers.pop_front().unwrap();
-        println!("Pulling worker {}", worker.id);
+        let wrapped_worker = self.workers.pop_front();
+        let worker;
+        match wrapped_worker {
+            Some(value) => worker = value,
+            None => panic!("No workers available"),
+        }
 
+        println!("Pulling worker {}", worker.id);
         if self.workers.len() < self.threshold as usize {
             self.low_capacity = true;
         }

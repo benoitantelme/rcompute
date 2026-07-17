@@ -23,7 +23,21 @@ mod orchestrator_test {
             orchestrator.pull_worker();
         }
         assert_eq!(orchestrator.low_capacity, false);
-         orchestrator.pull_worker();
+        orchestrator.pull_worker();
         assert_eq!(orchestrator.low_capacity, true);
+    }
+
+    #[test]
+    #[should_panic]
+    fn availability_test() {
+        let mut orchestrator = Orchestrator::new(1, 5, 3);
+
+        orchestrator.initialise();
+
+        for _n in 1..6 {
+            orchestrator.pull_worker();
+        }
+
+        orchestrator.pull_worker();
     }
 }

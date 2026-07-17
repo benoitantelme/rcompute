@@ -85,24 +85,21 @@ Responsibilities:
 
 ## 5. Worker Pool Management
 
-### Active Worker
+### Workers for task
 
-A worker is considered active when:
+Workers will be created for a task in order to not have idle workers:
 
-- It is connected to the orchestrator.
-- It has not timed out.
+- So if we don't have work, we don't have workers consuming resources for nothing.
+- We scale when needed.
 
-### Inactive Worker
+### Timed-out Worker
 
-A worker becomes inactive when:
+A worker can time out when it takes too long to execute its task:
 
-- A task assigned to it times out.
-
-### Re-activation
-
-An inactive worker becomes active again when:
-
-- It successfully communicates with the orchestrator by returning the result of its timed-out task.
+- It needs to be detected.
+- It needs to be de activated.
+- It needs to be replaced by a bew worker for the task.
+- Need to have a panic detection pattern in the future, maybe canceling a calculation if one task is failing or timing out repeatedly.
 
 ---
 
