@@ -4,7 +4,7 @@ use std::cmp::Ordering;
 
 #[derive(Eq, PartialEq)]
 pub struct Deadline {
-    when: SystemTime,
+    pub when: SystemTime,
     pub task_id: u32,
 }
 

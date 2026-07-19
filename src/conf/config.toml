@@ -1,3 +1,4 @@
 workers_number = 10
 workers_threshold = 3 
 timeout = 30000
+check_frequency = 20000

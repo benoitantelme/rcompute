@@ -5,10 +5,11 @@ mod simple_components_test {
 
     #[test]
     fn instantiation() {
-        let orchestrator = Orchestrator::new(1, 10,     3, 30);
+        let orchestrator = Orchestrator::new(1, 10,     3, 30, 30);
         assert_eq!(orchestrator.id, 1);
         assert_eq!(orchestrator.threshold, 3);
         assert_eq!(orchestrator.timeout, 30);
+        assert_eq!(orchestrator.check_frequency, 30);
 
         let worker = Worker::new(1, 1);
         assert_eq!(worker.id, 1);
@@ -17,7 +18,7 @@ mod simple_components_test {
 
     #[test]
     fn queuing() {
-        let mut orchestrator = Orchestrator::new(1, 10, 3, 30);
+        let mut orchestrator = Orchestrator::new(1, 10, 3, 30, 30);
 
         for n in 1..5 {
             let worker = Worker::new(n, n);

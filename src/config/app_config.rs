@@ -9,6 +9,7 @@ pub struct AppConfig {
     pub workers_number: usize,
     pub workers_threshold: u32,
     pub timeout: u64,
+    pub check_frequency: u64,
 }
 
 impl AppConfig {
@@ -23,6 +24,7 @@ impl AppConfig {
             workers_number: config.workers_number,
             workers_threshold: config.workers_threshold,
             timeout: config.timeout,
+            check_frequency: config.check_frequency,
         }
     }
 }

@@ -4,7 +4,7 @@ mod orchestrator_test {
 
     #[test]
     fn init() {
-        let mut orchestrator = Orchestrator::new(1,     5, 3, 30);
+        let mut orchestrator = Orchestrator::new(1,     5, 3, 30, 30);
 
         orchestrator.initialise();
         assert_eq!(orchestrator.get_worker_queue_size(), 5);
@@ -12,7 +12,7 @@ mod orchestrator_test {
 
     #[test]
     fn threshold_test() {
-        let mut orchestrator = Orchestrator::new(1, 5, 3, 30);
+        let mut orchestrator = Orchestrator::new(1, 5, 3, 30, 30);
 
         assert_eq!(orchestrator.low_capacity, true);
         orchestrator.initialise();
@@ -30,7 +30,7 @@ mod orchestrator_test {
     #[test]
     #[should_panic]
     fn availability_test() {
-        let mut orchestrator = Orchestrator::new(1, 5, 3, 30);
+        let mut orchestrator = Orchestrator::new(1, 5, 3, 30, 30);
 
         orchestrator.initialise();
 

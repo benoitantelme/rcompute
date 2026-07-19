@@ -17,13 +17,20 @@ pub struct Orchestrator {
     pub empty: bool,
     workers: VecDeque<Worker>,
     pub timeout: u64,
-    deadlines: Arc<Mutex<BinaryHeap<Deadline>>>,
+    pub check_frequency: u64,
+    pub deadlines: Arc<Mutex<BinaryHeap<Deadline>>>,
     timeout_channel: (mpsc::Sender<u32>, mpsc::Receiver<u32>),
     watching_timeouts: bool,
 }
 
 impl Orchestrator {
-    pub fn new(id: u32, initial_capacity: usize, threshold: u32, timeout: u64) -> Self {
+    pub fn new(
+        id: u32,
+        initial_capacity: usize,
+        threshold: u32,
+        timeout: u64,
+        check_frequency: u64,
+    ) -> Self {
         Self {
             id: id,
             threshold: threshold,
@@ -32,6 +39,7 @@ impl Orchestrator {
             empty: true,
             workers: VecDeque::with_capacity(initial_capacity),
             timeout: timeout,
+            check_frequency: check_frequency,
             deadlines: Arc::new(Mutex::new(BinaryHeap::new())),
             timeout_channel: mpsc::channel::<u32>(),
             watching_timeouts: false,
@@ -54,10 +62,11 @@ impl Orchestrator {
     fn check_timeouts(&mut self) {
         let deadlines = Arc::clone(&self.deadlines);
         let sender = self.timeout_channel.0.clone();
+        let check_frequency = self.check_frequency.clone();
 
         std::thread::spawn(move || {
             loop {
-                std::thread::sleep(Duration::from_secs(30));
+                std::thread::sleep(Duration::from_secs(check_frequency));
 
                 let mut deadlines = deadlines.lock().unwrap();
 
@@ -68,8 +77,8 @@ impl Orchestrator {
                 while let Some(deadline) = deadlines.peek() {
                     if deadline.is_expired() {
                         let expired = deadlines.pop().unwrap();
-
                         sender.send(expired.task_id).unwrap();
+                        println!("Deadline reached for task {}", expired.task_id);
                     } else {
                         break;
                     }
@@ -79,7 +88,7 @@ impl Orchestrator {
     }
 
     pub fn push_worker(&mut self, worker: Worker) {
-        // Managing timeouts if needed
+        // Managing timeouts
         self.deadlines
             .lock()
             .unwrap()
@@ -87,6 +96,14 @@ impl Orchestrator {
         if !self.watching_timeouts {
             self.watching_timeouts = true;
             self.check_timeouts();
+
+            // TODO: This is a blocking call, we need to find a way to make it non-blocking
+            // let receiver = &self.timeout_channel.1;
+            // match receiver.recv().unwrap() {
+            //     task_id => {
+            //         self.handle_timeout(task_id);
+            //     }
+            // }
         }
 
         println!("Adding worker {}", worker.id);
