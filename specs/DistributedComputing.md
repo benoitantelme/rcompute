@@ -91,6 +91,8 @@ Workers will be created for a task in order to not have idle workers:
 
 - So if we don't have work, we don't have workers consuming resources for nothing.
 - We scale when needed.
+- If we end-up needing workers we don't have it's a planification problem and we should panic
+
 
 ### Timed-out Worker
 
@@ -98,8 +100,10 @@ A worker can time out when it takes too long to execute its task:
 
 - It needs to be detected.
 - It needs to be de activated.
-- It needs to be replaced by a bew worker for the task.
+- It needs to be replaced by a new worker for the task.
 - Need to have a panic detection pattern in the future, maybe canceling a calculation if one task is failing or timing out repeatedly.
+
+We use a channel and a binary heap with preset timeouts to check if we have timed out workers. If we find a timed out worker is still supposed to be in use, we can clean it up.
 
 ---
 
