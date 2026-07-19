@@ -16,14 +16,14 @@ pub struct Orchestrator {
     pub low_capacity: bool,
     pub empty: bool,
     workers: VecDeque<Worker>,
-    pub timeout: u32,
+    pub timeout: u64,
     deadlines: Arc<Mutex<BinaryHeap<Deadline>>>,
     timeout_channel: (mpsc::Sender<u32>, mpsc::Receiver<u32>),
     watching_timeouts: bool,
 }
 
 impl Orchestrator {
-    pub fn new(id: u32, initial_capacity: usize, threshold: u32, timeout: u32) -> Self {
+    pub fn new(id: u32, initial_capacity: usize, threshold: u32, timeout: u64) -> Self {
         Self {
             id: id,
             threshold: threshold,
@@ -83,7 +83,7 @@ impl Orchestrator {
         self.deadlines
             .lock()
             .unwrap()
-            .push(Deadline::new(worker.id));
+            .push(Deadline::new(worker.id, self.timeout));
         if !self.watching_timeouts {
             self.watching_timeouts = true;
             self.check_timeouts();

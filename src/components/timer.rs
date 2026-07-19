@@ -9,10 +9,10 @@ pub struct Deadline {
 }
 
 impl Deadline {
-    pub fn new(task_id: u32) -> Self {
+    pub fn new(task_id: u32, timeout: u64) -> Self {
         Self {
             task_id: task_id,
-            when: SystemTime::now(),
+            when: SystemTime::now() + std::time::Duration::from_millis(timeout),
         }
     }
 

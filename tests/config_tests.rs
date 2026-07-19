@@ -7,6 +7,6 @@ mod config_test {
         let config: AppConfig = AppConfig::new();
         assert_eq!(config.workers_number, 10);
         assert_eq!(config.workers_threshold, 3);
-        assert_eq!(config.timeout, 30);
+        assert_eq!(config.timeout, 30* 1000);
     }
 }

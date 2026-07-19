@@ -8,7 +8,7 @@ use serde::Deserialize;
 pub struct AppConfig {
     pub workers_number: usize,
     pub workers_threshold: u32,
-    pub timeout: u32,
+    pub timeout: u64,
 }
 
 impl AppConfig {
