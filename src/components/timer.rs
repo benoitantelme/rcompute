@@ -1,6 +1,5 @@
-use std::time::SystemTime;
 use std::cmp::Ordering;
-
+use std::time::SystemTime;
 
 #[derive(Eq, PartialEq)]
 pub struct Deadline {

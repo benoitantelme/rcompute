@@ -5,7 +5,7 @@ mod simple_components_test {
 
     #[test]
     fn instantiation() {
-        let orchestrator = Orchestrator::new(1, 10,     3, 30, 30);
+        let orchestrator = Orchestrator::new(1, 10, 3, 30, 30);
         assert_eq!(orchestrator.id, 1);
         assert_eq!(orchestrator.threshold, 3);
         assert_eq!(orchestrator.timeout, 30);

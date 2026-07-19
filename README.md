@@ -7,11 +7,12 @@ Distributed computing in rust
 - [x] **Phase 1** — Rust, Cargo and CI setup
 - [x] **Phase 2** — Minimal orchestrator and workers
 - [x] **Phase 3** — Orchestrator and worker setup: configuration, availability, threshold, ...
-- [ ] **Phase 4** — Worker discovery and lifecycle
-- [ ] **Phase 5** — Task management and lifecycle
-- [ ] **Phase 6** — Observability
-- [ ] **Phase 7** — ......
+- [x] **Phase 4** — Worker discovery and lifecycle
+- [ ] **Phase 5** — Refactoring for timeouts and workers asynchronous observability
+- [ ] **Phase 6** — Task management and lifecycle
+- [ ] **Phase 7** — Observability
 - [ ] **Phase 8** — ......
+- [ ] **Phase 9** — ......
 
 ## Local Development
 

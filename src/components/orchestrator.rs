@@ -2,6 +2,7 @@ use crate::components::timer::Deadline;
 use crate::components::worker::Worker;
 
 use std::collections::BinaryHeap;
+use std::collections::HashSet;
 use std::collections::VecDeque;
 use std::fmt;
 use std::sync::Arc;
@@ -16,6 +17,7 @@ pub struct Orchestrator {
     pub low_capacity: bool,
     pub empty: bool,
     workers: VecDeque<Worker>,
+    pub busy_workers: HashSet<u32>,
     pub timeout: u64,
     pub check_frequency: u64,
     pub deadlines: Arc<Mutex<BinaryHeap<Deadline>>>,
@@ -38,6 +40,7 @@ impl Orchestrator {
             low_capacity: true,
             empty: true,
             workers: VecDeque::with_capacity(initial_capacity),
+            busy_workers: HashSet::new(),
             timeout: timeout,
             check_frequency: check_frequency,
             deadlines: Arc::new(Mutex::new(BinaryHeap::new())),
@@ -97,7 +100,7 @@ impl Orchestrator {
             self.watching_timeouts = true;
             self.check_timeouts();
 
-            // TODO: This is a blocking call, we need to find a way to make it non-blocking
+            // TODO: This is a blocking call, need to find a way to make it non-blocking
             // let receiver = &self.timeout_channel.1;
             // match receiver.recv().unwrap() {
             //     task_id => {
@@ -106,6 +109,7 @@ impl Orchestrator {
             // }
         }
 
+        self.busy_workers.insert(worker.id);
         println!("Adding worker {}", worker.id);
         self.workers.push_back(worker);
 
@@ -122,6 +126,8 @@ impl Orchestrator {
             Some(value) => worker = value,
             None => panic!("No workers available"),
         }
+
+        self.busy_workers.remove(&worker.id);
 
         println!("Pulling worker {}", worker.id);
         if self.workers.len() < self.threshold as usize {
