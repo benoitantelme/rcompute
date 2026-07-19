@@ -6,8 +6,10 @@ use serde::Deserialize;
 
 #[derive(Debug, PartialEq, Deserialize)]
 pub struct AppConfig {
-    pub orchestrator_workers_number: usize,
-    pub orchestrator_workers_threshold: u32,
+    pub workers_number: usize,
+    pub workers_threshold: u32,
+    pub timeout: u64,
+    pub check_frequency: u64,
 }
 
 impl AppConfig {
@@ -19,8 +21,10 @@ impl AppConfig {
             .expect(&("Failed to extract configuration from ".to_string() + config_path));
 
         Self {
-            orchestrator_workers_number: config.orchestrator_workers_number,
-            orchestrator_workers_threshold: config.orchestrator_workers_threshold,
+            workers_number: config.workers_number,
+            workers_threshold: config.workers_threshold,
+            timeout: config.timeout,
+            check_frequency: config.check_frequency,
         }
     }
 }

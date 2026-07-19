@@ -1,2 +1,4 @@
-orchestrator_workers_number = 10
-orchestrator_workers_threshold = 3 
+workers_number = 10
+workers_threshold = 3 
+timeout = 30000
+check_frequency = 20000

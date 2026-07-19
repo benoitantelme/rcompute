@@ -1,5 +1,6 @@
 use std::fmt;
 
+#[derive(Eq, Hash, PartialEq)]
 pub struct Worker {
     pub id: u32,
     pub task: u32,
