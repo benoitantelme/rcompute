@@ -6,7 +6,7 @@ use rcompute::config::app_config::AppConfig;
 fn main() {
     let config: AppConfig = AppConfig::new();
 
-    let mut orchestrator = Orchestrator::new(1, config.orchestrator_workers_number, config.orchestrator_workers_threshold);
+    let mut orchestrator = Orchestrator::new(1, config.workers_number, config.workers_threshold, config.timeout);
     println!("{}", orchestrator.to_string());
 
 
