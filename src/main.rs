@@ -1,12 +1,17 @@
+use rcompute::components::event::Event;
 use rcompute::components::orchestrator::Orchestrator;
 use rcompute::components::worker::Worker;
 use rcompute::config::app_config::AppConfig;
 
+use std::sync::mpsc;
+use std::time::Duration;
+
 fn main() {
     let config: AppConfig = AppConfig::new();
-
+    let (tx, rx) = mpsc::channel::<Event>();
     let mut orchestrator = Orchestrator::new(
         1,
+        rx,
         config.workers_number,
         config.workers_threshold,
         config.timeout,
@@ -15,6 +20,10 @@ fn main() {
     println!("{}", orchestrator.to_string());
     orchestrator.initialise();
 
-    let worker = Worker::new(1, 1);
+    std::thread::spawn(move || orchestrator.run());
+
+    let worker = Worker::new(1, 1, tx);
     println!("{}", worker.to_string());
+    worker.calculate();
+    std::thread::sleep(Duration::from_millis(10));
 }

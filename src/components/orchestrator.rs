@@ -1,12 +1,10 @@
+use crate::components::event::Event;
 use crate::components::timer::Deadline;
-use crate::components::worker::Worker;
 
 use std::collections::BinaryHeap;
 use std::collections::HashSet;
 use std::collections::VecDeque;
 use std::fmt;
-use std::sync::Arc;
-use std::sync::Mutex;
 use std::sync::mpsc;
 use std::time::Duration;
 
@@ -16,18 +14,18 @@ pub struct Orchestrator {
     pub threshold: u32,
     pub low_capacity: bool,
     pub empty: bool,
-    workers: VecDeque<Worker>,
+    pub available_workers: VecDeque<u32>,
     pub busy_workers: HashSet<u32>,
     pub timeout: u64,
     pub check_frequency: u64,
-    pub deadlines: Arc<Mutex<BinaryHeap<Deadline>>>,
-    timeout_channel: (mpsc::Sender<u32>, mpsc::Receiver<u32>),
-    watching_timeouts: bool,
+    pub deadlines: BinaryHeap<Deadline>,
+    events_receiver: mpsc::Receiver<Event>,
 }
 
 impl Orchestrator {
     pub fn new(
         id: u32,
+        events_receiver: mpsc::Receiver<Event>,
         initial_capacity: usize,
         threshold: u32,
         timeout: u64,
@@ -35,122 +33,117 @@ impl Orchestrator {
     ) -> Self {
         Self {
             id: id,
+            events_receiver: events_receiver,
             threshold: threshold,
             initial_capacity: initial_capacity,
             low_capacity: true,
             empty: true,
-            workers: VecDeque::with_capacity(initial_capacity),
+            available_workers: VecDeque::with_capacity(initial_capacity),
             busy_workers: HashSet::new(),
             timeout: timeout,
             check_frequency: check_frequency,
-            deadlines: Arc::new(Mutex::new(BinaryHeap::new())),
-            timeout_channel: mpsc::channel::<u32>(),
-            watching_timeouts: false,
+            deadlines: BinaryHeap::new(),
         }
     }
 
     pub fn initialise(&mut self) {
         for n in 1..self.initial_capacity as u32 + 1 {
-            let worker = Worker::new(n, n);
-            self.push_worker(worker);
+            self.push_worker(n);
         }
 
         println!(
             "Orchestrator {} initialised with {} workers",
             self.id,
-            self.workers.len()
+            self.available_workers.len()
         );
     }
 
-    fn check_timeouts(&mut self) {
-        let deadlines = Arc::clone(&self.deadlines);
-        let sender = self.timeout_channel.0.clone();
-        let check_frequency = self.check_frequency.clone();
-
-        std::thread::spawn(move || {
-            loop {
-                std::thread::sleep(Duration::from_secs(check_frequency));
-
-                let mut deadlines = deadlines.lock().unwrap();
-
-                if deadlines.is_empty() {
-                    break;
-                }
-
-                while let Some(deadline) = deadlines.peek() {
-                    if deadline.is_expired() {
-                        let expired = deadlines.pop().unwrap();
-                        sender.send(expired.task_id).unwrap();
-                        println!("Deadline reached for task {}", expired.task_id);
-                    } else {
-                        break;
-                    }
+    pub fn run(mut self) {
+        loop {
+            while let Ok(event) = self.events_receiver.try_recv() {
+                match event {
+                    Event::Timeout(id) => self.handle_timeout(id),
+                    Event::TaskFinished(result) => println!(
+                        "self.handle_result(result) with id {} and result {}",
+                        result.id, result.result
+                    ),
+                    Event::NewTask(task) => println!(
+                        "self.add_task(task) with id {} and input {}",
+                        task.id, task.input
+                    ),
                 }
             }
-        });
+
+            self.detect_timeouts();
+
+            // TODO: do we need schedule?
+            // self.schedule();
+            std::thread::sleep(Duration::from_millis(10));
+        }
     }
 
-    pub fn push_worker(&mut self, worker: Worker) {
-        // Managing timeouts
-        self.deadlines
-            .lock()
-            .unwrap()
-            .push(Deadline::new(worker.id, self.timeout));
-        if !self.watching_timeouts {
-            self.watching_timeouts = true;
-            self.check_timeouts();
-
-            // TODO: This is a blocking call, need to find a way to make it non-blocking
-            // let receiver = &self.timeout_channel.1;
-            // match receiver.recv().unwrap() {
-            //     task_id => {
-            //         self.handle_timeout(task_id);
-            //     }
-            // }
+    // TODO: see if possible to return last non achieved timeout so we can sleep for that duration
+    fn detect_timeouts(&mut self) {
+        if self.deadlines.is_empty() {
+            return;
         }
 
-        self.busy_workers.insert(worker.id);
-        println!("Adding worker {}", worker.id);
-        self.workers.push_back(worker);
+        while let Some(deadline) = self.deadlines.peek() {
+            if deadline.is_expired() {
+                let expired = self.deadlines.pop().unwrap();
+                println!("Deadline reached for task {}", expired.task_id);
+                self.handle_timeout(expired.task_id);
+            } else {
+                break;
+            }
+        }
+    }
 
-        if self.workers.len() >= self.threshold as usize {
+    pub fn push_worker(&mut self, worker_id: u32) {
+        // Managing timeouts
+        self.deadlines.push(Deadline::new(worker_id, self.timeout));
+
+        println!("Adding worker {}", worker_id);
+        self.available_workers.push_back(worker_id);
+
+        if self.available_workers.len() >= self.threshold as usize {
             self.low_capacity = false;
         }
         self.empty = false;
     }
 
-    pub fn pull_worker(&mut self) -> Worker {
-        let wrapped_worker = self.workers.pop_front();
-        let worker;
+    pub fn pull_worker(&mut self) -> u32 {
+        let wrapped_worker = self.available_workers.pop_front();
+        let worker_id;
         match wrapped_worker {
-            Some(value) => worker = value,
+            Some(value) => worker_id = value,
             None => panic!("No workers available"),
         }
 
-        self.busy_workers.remove(&worker.id);
+        self.busy_workers.remove(&worker_id);
 
-        println!("Pulling worker {}", worker.id);
-        if self.workers.len() < self.threshold as usize {
+        println!("Pulling worker {}", worker_id);
+        if self.available_workers.len() < self.threshold as usize {
             self.low_capacity = true;
         }
 
-        worker
+        worker_id
     }
 
     pub fn get_worker_queue_size(&mut self) -> usize {
-        self.workers.len()
+        self.available_workers.len()
     }
 
-    pub fn receive_result(&self, worker: Worker) -> (u32, u32, u32) {
+    pub fn receive_result(&self, worker_id: u32, task_result: u32) -> (u32, u32) {
         println!(
             "Received result from worker {} and task {}",
-            worker.id, worker.task
+            worker_id, task_result
         );
-        (worker.id, worker.task, worker.calculate())
+        (worker_id, task_result)
     }
 
-    pub fn handle_timeout(&self, timer_id: u32) {
-        println!("Received timeout for timer {} ", timer_id);
+    pub fn handle_timeout(&self, task_id: u32) {
+        println!("Received timeout for id {} ", task_id);
 
         //TODO: Handle timeout logic here, reset task, keep a trace of already failed task, loose worker ref?
     }
