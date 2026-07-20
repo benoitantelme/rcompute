@@ -7,20 +7,44 @@ A distributed computing system composed of:
 - One **Orchestrator** node.
 - Multiple **Worker** nodes.
 
-The orchestrator distributes calculation tasks to workers, collects and merge the results.
+The orchestrator receive tasks, split and distributes calculation tasks to workers, collects and merge the results.
 
 It will be ''locally'' distributed first.
+---
+
+## 2. Architecture
+
+                 +----------------+
+                 |      main      |
+                 +----------------+
+                          |
+                          | spawn
+                          v
+               +---------------------+
+               |    Orchestrator     |
+               |---------------------|
+               | owns all states     |
+               | Receiver<Event>     |
+               +---------------------+
+                    ^     ^      ^
+                    |     |      |
+              Sender|     |Sender|Sender
+                    |     |      |
+          +---------+     |      +---------+
+          |               |                |
+     Worker 1        Worker 2        Timer Thread
 
 ---
 
-## 2. Components
+## 3. Components
 
 ### Orchestrator
 
 Responsibilities:
 
 - Maintain the list of known workers.
-- Assign tasks to available workers.
+- Receive tasks and split them into sub tasks.
+- Assign them to available workers.
 - Receive task results.
 - Detect worker timeouts and execution failures.
 - Reassign failed or timed-out tasks.
@@ -39,7 +63,7 @@ Responsibilities:
 
 ---
 
-## 3. Worker Discovery
+## 4. Worker Discovery
 
 - All workers must be configured with the orchestrator network reference (IP address or hostname, this will be the orchestrator self reference locally).
 - Workers initiate communication with the orchestrator.
@@ -47,7 +71,7 @@ Responsibilities:
 
 ---
 
-## 4. Task Lifecycle
+## 5. Task Lifecycle
 
 ### Assignment
 
@@ -69,7 +93,7 @@ Responsibilities:
 
 ### Timeout
 
-1. A configurable timeout is associated with each task assignment.
+1. A configurable timeout is associated with each worker's task assignment.
 2. If no result is received before the timeout expires:
    - The assignment is considered failed.
    - The worker is removed from the active worker pool.
@@ -83,7 +107,7 @@ Responsibilities:
 
 ---
 
-## 5. Worker Pool Management
+## 6. Worker Pool Management
 
 ### Workers for task
 
@@ -107,7 +131,7 @@ We use a channel and a binary heap with preset timeouts to check if we have time
 
 ---
 
-## 6. Task Reassignment Rules
+## 7. Task Reassignment Rules
 
 - Failed tasks must be reassigned to a different active worker.
 - Reassignment occurs after:
@@ -119,7 +143,7 @@ We use a channel and a binary heap with preset timeouts to check if we have time
 
 ---
 
-## 7. Resource Monitoring
+## 8. Resource Monitoring
 
 A configurable parameter defines:
 
@@ -144,7 +168,7 @@ A message is displayed when the available workers count meets or exceeds the thr
 
 ---
 
-## 8. Configuration
+## 9. Configuration
 
 The system must support the following configuration parameters:
 

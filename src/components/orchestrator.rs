@@ -1,3 +1,4 @@
+use crate::components::event::Event;
 use crate::components::timer::Deadline;
 use crate::components::worker::Worker;
 
@@ -22,7 +23,7 @@ pub struct Orchestrator {
     pub check_frequency: u64,
     pub deadlines: Arc<Mutex<BinaryHeap<Deadline>>>,
     timeout_channel: (mpsc::Sender<u32>, mpsc::Receiver<u32>),
-    watching_timeouts: bool,
+    events_channel: (mpsc::Sender<Event>, mpsc::Receiver<Event>),
 }
 
 impl Orchestrator {
@@ -45,7 +46,7 @@ impl Orchestrator {
             check_frequency: check_frequency,
             deadlines: Arc::new(Mutex::new(BinaryHeap::new())),
             timeout_channel: mpsc::channel::<u32>(),
-            watching_timeouts: false,
+            events_channel: mpsc::channel::<Event>(),
         }
     }
 
@@ -60,9 +61,39 @@ impl Orchestrator {
             self.id,
             self.workers.len()
         );
+
+        // listen for timeouts
+        self.detect_timeouts();
+        // just work once
+        match self.timeout_channel.1.try_recv() {
+            Ok(task_id) => {
+                self.handle_timeout(task_id);
+            }
+            Err(mpsc::TryRecvError::Empty) => {
+                // No timeout event right now, continue doing other work
+                println!("No error")
+            }
+            Err(mpsc::TryRecvError::Disconnected) => {
+                // The sender has been dropped
+                println!("Timeouts sender disconnected")
+            }
+        }
+
+        loop {
+            while let Ok(event) = self.events_channel.1.try_recv() {
+                match event {
+                    Event::Timeout(id) => self.handle_timeout(id),
+                    Event::TaskFinished(result) => println!("self.handle_result(result)"),
+                    Event::NewTask(task) => println!("self.add_task(task)"),
+                }
+            }
+
+            // self.schedule();
+            std::thread::sleep(Duration::from_millis(10));
+        }
     }
 
-    fn check_timeouts(&mut self) {
+    fn detect_timeouts(&mut self) {
         let deadlines = Arc::clone(&self.deadlines);
         let sender = self.timeout_channel.0.clone();
         let check_frequency = self.check_frequency.clone();
@@ -90,24 +121,30 @@ impl Orchestrator {
         });
     }
 
+    fn receive_timeouts(&mut self) {
+        // no good can't share receivers need to pivot
+        // let receiver = &self.timeout_channel.1;
+
+        // std::thread::spawn(move || {
+        //     loop {
+        //         match receiver.recv() {
+        //             Ok(task_id) => {
+        //                 self.handle_timeout(task_id);
+        //             }
+        //             Err(mpsc::RecvError) => {
+        //                 println!("Received error")
+        //             }
+        //         }
+        //     }
+        // });
+    }
+
     pub fn push_worker(&mut self, worker: Worker) {
         // Managing timeouts
         self.deadlines
             .lock()
             .unwrap()
             .push(Deadline::new(worker.id, self.timeout));
-        if !self.watching_timeouts {
-            self.watching_timeouts = true;
-            self.check_timeouts();
-
-            // TODO: This is a blocking call, need to find a way to make it non-blocking
-            // let receiver = &self.timeout_channel.1;
-            // match receiver.recv().unwrap() {
-            //     task_id => {
-            //         self.handle_timeout(task_id);
-            //     }
-            // }
-        }
 
         self.busy_workers.insert(worker.id);
         println!("Adding worker {}", worker.id);
