@@ -7,7 +7,7 @@ mod simple_orchestrator_test {
 
     #[test]
     fn init() {
-        let (tx, rx) = mpsc::channel::<Event>();
+        let (_tx, rx) = mpsc::channel::<Event>();
         let mut orchestrator = Orchestrator::new(1, rx, 5, 3, 30, 30);
 
         orchestrator.initialise();
@@ -16,7 +16,7 @@ mod simple_orchestrator_test {
 
     #[test]
     fn threshold_test() {
-        let (tx, rx) = mpsc::channel::<Event>();
+        let (_tx, rx) = mpsc::channel::<Event>();
         let mut orchestrator = Orchestrator::new(1, rx, 5, 3, 30, 30);
 
         assert_eq!(orchestrator.low_capacity, true);
@@ -35,7 +35,7 @@ mod simple_orchestrator_test {
     #[test]
     #[should_panic]
     fn availability_test() {
-        let (tx, rx) = mpsc::channel::<Event>();
+        let (_tx, rx) = mpsc::channel::<Event>();
         let mut orchestrator = Orchestrator::new(1, rx, 5, 3, 30, 30);
 
         orchestrator.initialise();
@@ -45,5 +45,20 @@ mod simple_orchestrator_test {
         }
 
         orchestrator.pull_worker();
+    }
+
+    #[test]
+    fn check_available_workers() {
+        let (_tx, rx) = mpsc::channel::<Event>();
+        let mut orchestrator = Orchestrator::new(1, rx, 5, 3, 30, 30);
+
+        assert_eq!(orchestrator.available_workers.len(), 0);
+        orchestrator.initialise();
+        assert_eq!(orchestrator.available_workers.len(), 5);
+
+        for _n in 1..3 {
+            orchestrator.pull_worker();
+        }
+        assert_eq!(orchestrator.available_workers.len(), 3);
     }
 }

@@ -63,13 +63,20 @@ impl Orchestrator {
             while let Ok(event) = self.events_receiver.try_recv() {
                 match event {
                     Event::Timeout(id) => self.handle_timeout(id),
-                    Event::TaskFinished(result) => println!("self.handle_result(result)"),
-                    Event::NewTask(task) => println!("self.add_task(task)"),
+                    Event::TaskFinished(result) => println!(
+                        "self.handle_result(result) with id {} and result {}",
+                        result.id, result.result
+                    ),
+                    Event::NewTask(task) => println!(
+                        "self.add_task(task) with id {} and input {}",
+                        task.id, task.input
+                    ),
                 }
             }
 
             self.detect_timeouts();
 
+            // TODO: do we need schedule?
             // self.schedule();
             std::thread::sleep(Duration::from_millis(10));
         }

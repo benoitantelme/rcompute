@@ -4,6 +4,7 @@ use rcompute::components::worker::Worker;
 use rcompute::config::app_config::AppConfig;
 
 use std::sync::mpsc;
+use std::time::Duration;
 
 fn main() {
     let config: AppConfig = AppConfig::new();
@@ -21,6 +22,8 @@ fn main() {
 
     std::thread::spawn(move || orchestrator.run());
 
-    let worker = Worker::new(1, 1);
+    let worker = Worker::new(1, 1, tx);
     println!("{}", worker.to_string());
+    worker.calculate();
+    std::thread::sleep(Duration::from_millis(10));
 }

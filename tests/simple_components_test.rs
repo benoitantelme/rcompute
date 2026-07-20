@@ -15,14 +15,14 @@ mod simple_components_test {
         assert_eq!(orchestrator.timeout, 30);
         assert_eq!(orchestrator.check_frequency, 30);
 
-        let worker = Worker::new(1, 1);
+        let worker = Worker::new(1, 1, tx);
         assert_eq!(worker.id, 1);
         assert_eq!(worker.task, 1);
     }
 
     #[test]
     fn queuing() {
-        let (tx, rx) = mpsc::channel::<Event>();
+        let (_tx, rx) = mpsc::channel::<Event>();
         let mut orchestrator = Orchestrator::new(1, rx, 10, 3, 30, 30);
 
         for n in 1..5 {
