@@ -6,8 +6,6 @@ use std::collections::BinaryHeap;
 use std::collections::HashSet;
 use std::collections::VecDeque;
 use std::fmt;
-use std::sync::Arc;
-use std::sync::Mutex;
 use std::sync::mpsc;
 use std::time::Duration;
 
@@ -21,14 +19,14 @@ pub struct Orchestrator {
     pub busy_workers: HashSet<u32>,
     pub timeout: u64,
     pub check_frequency: u64,
-    pub deadlines: Arc<Mutex<BinaryHeap<Deadline>>>,
-    timeout_channel: (mpsc::Sender<u32>, mpsc::Receiver<u32>),
-    events_channel: (mpsc::Sender<Event>, mpsc::Receiver<Event>),
+    pub deadlines: BinaryHeap<Deadline>,
+    events_receiver: mpsc::Receiver<Event>,
 }
 
 impl Orchestrator {
     pub fn new(
         id: u32,
+        events_receiver: mpsc::Receiver<Event>,
         initial_capacity: usize,
         threshold: u32,
         timeout: u64,
@@ -36,6 +34,7 @@ impl Orchestrator {
     ) -> Self {
         Self {
             id: id,
+            events_receiver: events_receiver,
             threshold: threshold,
             initial_capacity: initial_capacity,
             low_capacity: true,
@@ -44,9 +43,7 @@ impl Orchestrator {
             busy_workers: HashSet::new(),
             timeout: timeout,
             check_frequency: check_frequency,
-            deadlines: Arc::new(Mutex::new(BinaryHeap::new())),
-            timeout_channel: mpsc::channel::<u32>(),
-            events_channel: mpsc::channel::<Event>(),
+            deadlines: BinaryHeap::new(),
         }
     }
 
@@ -64,23 +61,11 @@ impl Orchestrator {
 
         // listen for timeouts
         self.detect_timeouts();
-        // just work once
-        match self.timeout_channel.1.try_recv() {
-            Ok(task_id) => {
-                self.handle_timeout(task_id);
-            }
-            Err(mpsc::TryRecvError::Empty) => {
-                // No timeout event right now, continue doing other work
-                println!("No error")
-            }
-            Err(mpsc::TryRecvError::Disconnected) => {
-                // The sender has been dropped
-                println!("Timeouts sender disconnected")
-            }
-        }
+    }
 
+    pub fn run(mut self) {
         loop {
-            while let Ok(event) = self.events_channel.1.try_recv() {
+            while let Ok(event) = self.events_receiver.try_recv() {
                 match event {
                     Event::Timeout(id) => self.handle_timeout(id),
                     Event::TaskFinished(result) => println!("self.handle_result(result)"),
@@ -88,63 +73,33 @@ impl Orchestrator {
                 }
             }
 
+            self.detect_timeouts();
+
             // self.schedule();
             std::thread::sleep(Duration::from_millis(10));
         }
     }
 
+    // see if possible to return last non achieved timeout so we can sleep for that duration
     fn detect_timeouts(&mut self) {
-        let deadlines = Arc::clone(&self.deadlines);
-        let sender = self.timeout_channel.0.clone();
-        let check_frequency = self.check_frequency.clone();
+        if self.deadlines.is_empty() {
+            return;
+        }
 
-        std::thread::spawn(move || {
-            loop {
-                std::thread::sleep(Duration::from_secs(check_frequency));
-
-                let mut deadlines = deadlines.lock().unwrap();
-
-                if deadlines.is_empty() {
-                    break;
-                }
-
-                while let Some(deadline) = deadlines.peek() {
-                    if deadline.is_expired() {
-                        let expired = deadlines.pop().unwrap();
-                        sender.send(expired.task_id).unwrap();
-                        println!("Deadline reached for task {}", expired.task_id);
-                    } else {
-                        break;
-                    }
-                }
+        while let Some(deadline) = self.deadlines.peek() {
+            if deadline.is_expired() {
+                let expired = self.deadlines.pop().unwrap();
+                println!("Deadline reached for task {}", expired.task_id);
+                self.handle_timeout(expired.task_id);
+            } else {
+                break;
             }
-        });
-    }
-
-    fn receive_timeouts(&mut self) {
-        // no good can't share receivers need to pivot
-        // let receiver = &self.timeout_channel.1;
-
-        // std::thread::spawn(move || {
-        //     loop {
-        //         match receiver.recv() {
-        //             Ok(task_id) => {
-        //                 self.handle_timeout(task_id);
-        //             }
-        //             Err(mpsc::RecvError) => {
-        //                 println!("Received error")
-        //             }
-        //         }
-        //     }
-        // });
+        }
     }
 
     pub fn push_worker(&mut self, worker: Worker) {
         // Managing timeouts
-        self.deadlines
-            .lock()
-            .unwrap()
-            .push(Deadline::new(worker.id, self.timeout));
+        self.deadlines.push(Deadline::new(worker.id, self.timeout));
 
         self.busy_workers.insert(worker.id);
         println!("Adding worker {}", worker.id);
@@ -186,8 +141,8 @@ impl Orchestrator {
         (worker.id, worker.task, worker.calculate())
     }
 
-    pub fn handle_timeout(&self, timer_id: u32) {
-        println!("Received timeout for timer {} ", timer_id);
+    pub fn handle_timeout(&self, task_id: u32) {
+        println!("Received timeout for id {} ", task_id);
 
         //TODO: Handle timeout logic here, reset task, keep a trace of already failed task, loose worker ref?
     }

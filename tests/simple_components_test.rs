@@ -2,10 +2,14 @@
 mod simple_components_test {
     use rcompute::components::orchestrator::Orchestrator;
     use rcompute::components::worker::Worker;
+    use rcompute::components::event::Event;
+
+    use std::sync::mpsc;
 
     #[test]
     fn instantiation() {
-        let orchestrator = Orchestrator::new(1, 10, 3, 30, 30);
+        let (tx, rx) = mpsc::channel::<Event>();
+        let orchestrator = Orchestrator::new(1, rx, 10, 3, 30, 30);
         assert_eq!(orchestrator.id, 1);
         assert_eq!(orchestrator.threshold, 3);
         assert_eq!(orchestrator.timeout, 30);
@@ -18,7 +22,8 @@ mod simple_components_test {
 
     #[test]
     fn queuing() {
-        let mut orchestrator = Orchestrator::new(1, 10, 3, 30, 30);
+        let (tx, rx) = mpsc::channel::<Event>();
+        let mut orchestrator = Orchestrator::new(1, rx, 10, 3, 30, 30);
 
         for n in 1..5 {
             let worker = Worker::new(n, n);

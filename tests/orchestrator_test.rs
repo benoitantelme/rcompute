@@ -1,10 +1,14 @@
 #[cfg(test)]
 mod orchestrator_test {
+    use rcompute::components::event::Event;
     use rcompute::components::orchestrator::Orchestrator;
+
+    use std::sync::mpsc;
 
     #[test]
     fn init() {
-        let mut orchestrator = Orchestrator::new(1, 5, 3, 30, 30);
+        let (tx, rx) = mpsc::channel::<Event>();
+        let mut orchestrator = Orchestrator::new(1, rx, 5, 3, 30, 30);
 
         orchestrator.initialise();
         assert_eq!(orchestrator.get_worker_queue_size(), 5);
@@ -12,7 +16,8 @@ mod orchestrator_test {
 
     #[test]
     fn threshold_test() {
-        let mut orchestrator = Orchestrator::new(1, 5, 3, 30, 30);
+        let (tx, rx) = mpsc::channel::<Event>();
+        let mut orchestrator = Orchestrator::new(1, rx, 5, 3, 30, 30);
 
         assert_eq!(orchestrator.low_capacity, true);
         orchestrator.initialise();
@@ -30,7 +35,8 @@ mod orchestrator_test {
     #[test]
     #[should_panic]
     fn availability_test() {
-        let mut orchestrator = Orchestrator::new(1, 5, 3, 30, 30);
+        let (tx, rx) = mpsc::channel::<Event>();
+        let mut orchestrator = Orchestrator::new(1, rx, 5, 3, 30, 30);
 
         orchestrator.initialise();
 
