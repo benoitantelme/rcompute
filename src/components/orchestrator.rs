@@ -15,7 +15,7 @@ pub struct Orchestrator {
     pub threshold: u32,
     pub low_capacity: bool,
     pub empty: bool,
-    workers: VecDeque<Worker>,
+    available_workers: VecDeque<Worker>,
     pub busy_workers: HashSet<u32>,
     pub timeout: u64,
     pub check_frequency: u64,
@@ -39,7 +39,7 @@ impl Orchestrator {
             initial_capacity: initial_capacity,
             low_capacity: true,
             empty: true,
-            workers: VecDeque::with_capacity(initial_capacity),
+            available_workers: VecDeque::with_capacity(initial_capacity),
             busy_workers: HashSet::new(),
             timeout: timeout,
             check_frequency: check_frequency,
@@ -56,11 +56,8 @@ impl Orchestrator {
         println!(
             "Orchestrator {} initialised with {} workers",
             self.id,
-            self.workers.len()
+            self.available_workers.len()
         );
-
-        // listen for timeouts
-        self.detect_timeouts();
     }
 
     pub fn run(mut self) {
@@ -103,16 +100,16 @@ impl Orchestrator {
 
         self.busy_workers.insert(worker.id);
         println!("Adding worker {}", worker.id);
-        self.workers.push_back(worker);
+        self.available_workers.push_back(worker);
 
-        if self.workers.len() >= self.threshold as usize {
+        if self.available_workers.len() >= self.threshold as usize {
             self.low_capacity = false;
         }
         self.empty = false;
     }
 
     pub fn pull_worker(&mut self) -> Worker {
-        let wrapped_worker = self.workers.pop_front();
+        let wrapped_worker = self.available_workers.pop_front();
         let worker;
         match wrapped_worker {
             Some(value) => worker = value,
@@ -122,7 +119,7 @@ impl Orchestrator {
         self.busy_workers.remove(&worker.id);
 
         println!("Pulling worker {}", worker.id);
-        if self.workers.len() < self.threshold as usize {
+        if self.available_workers.len() < self.threshold as usize {
             self.low_capacity = true;
         }
 
@@ -130,7 +127,7 @@ impl Orchestrator {
     }
 
     pub fn get_worker_queue_size(&mut self) -> usize {
-        self.workers.len()
+        self.available_workers.len()
     }
 
     pub fn receive_result(&self, worker: Worker) -> (u32, u32, u32) {

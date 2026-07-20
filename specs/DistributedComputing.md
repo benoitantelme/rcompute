@@ -15,7 +15,8 @@ It will be ''locally'' distributed first.
 ## 2. Architecture
 
                  +----------------+
-                 |      main      |
+                 |     main /     |
+                 |   observator   |
                  +----------------+
                           |
                           | spawn

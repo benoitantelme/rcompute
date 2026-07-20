@@ -9,10 +9,11 @@ Distributed computing in rust
 - [x] **Phase 3** — Orchestrator and worker setup: configuration, availability, threshold, ...
 - [x] **Phase 4** — Worker discovery and lifecycle
 - [ ] **Phase 5** — Refactoring as an actors like system for orchestrator and workers
-- [ ] **Phase 6** — Task management and lifecycle
-- [ ] **Phase 7** — Observability
-- [ ] **Phase 8** — ......
+- [ ] **Phase 6** — Observability
+- [ ] **Phase 7** — Timeouts and deadlines
+- [ ] **Phase 8** — Task management and lifecycle
 - [ ] **Phase 9** — ......
+- [ ] **Phase 10** — ......
 
 ## Local Development
 

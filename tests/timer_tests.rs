@@ -1,12 +1,11 @@
-
 #[cfg(test)]
 mod timer_test {
+    use rcompute::components::event::Event;
     use rcompute::components::orchestrator::Orchestrator;
     use rcompute::components::timer::Deadline;
-    use rcompute::components::event::Event;
 
-    use std::{thread, time};
     use std::sync::mpsc;
+    use std::{thread, time};
 
     #[test]
     fn check_expiration() {
@@ -45,9 +44,11 @@ mod timer_test {
     #[test]
     fn orchestrator_timeouts() {
         let (tx, rx) = mpsc::channel::<Event>();
-        // TODO: This test is currently failing because the orchestrator is not handling timeouts correctly. We need to fix the timeout handling in the orchestrator before this test can pass.
+        // TODO: This test is currently failing because the orchestrator is not handling timeouts correctly. We need to fix the timeout 
+        // handling in the orchestrator before this test can pass. This will be done later with timeouts messages
         let mut orchestrator = Orchestrator::new(1, rx, 5, 3, 30, 30);
         orchestrator.initialise();
+        std::thread::spawn(move || orchestrator.run());
 
         // assert_eq!(some timeouts);
     }

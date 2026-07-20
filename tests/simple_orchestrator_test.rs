@@ -1,5 +1,5 @@
 #[cfg(test)]
-mod orchestrator_test {
+mod simple_orchestrator_test {
     use rcompute::components::event::Event;
     use rcompute::components::orchestrator::Orchestrator;
 
