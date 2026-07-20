@@ -44,7 +44,7 @@ mod timer_test {
     #[test]
     fn orchestrator_timeouts() {
         let (tx, rx) = mpsc::channel::<Event>();
-        // TODO: This test is currently failing because the orchestrator is not handling timeouts correctly. We need to fix the timeout 
+        // TODO: This test is currently failing because the orchestrator is not handling timeouts correctly. We need to fix the timeout
         // handling in the orchestrator before this test can pass. This will be done later with timeouts messages
         let mut orchestrator = Orchestrator::new(1, rx, 5, 3, 30, 30);
         orchestrator.initialise();

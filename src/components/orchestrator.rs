@@ -1,6 +1,5 @@
 use crate::components::event::Event;
 use crate::components::timer::Deadline;
-use crate::components::worker::Worker;
 
 use std::collections::BinaryHeap;
 use std::collections::HashSet;
@@ -15,7 +14,7 @@ pub struct Orchestrator {
     pub threshold: u32,
     pub low_capacity: bool,
     pub empty: bool,
-    available_workers: VecDeque<Worker>,
+    pub available_workers: VecDeque<u32>,
     pub busy_workers: HashSet<u32>,
     pub timeout: u64,
     pub check_frequency: u64,
@@ -49,8 +48,7 @@ impl Orchestrator {
 
     pub fn initialise(&mut self) {
         for n in 1..self.initial_capacity as u32 + 1 {
-            let worker = Worker::new(n, n);
-            self.push_worker(worker);
+            self.push_worker(n);
         }
 
         println!(
@@ -77,7 +75,7 @@ impl Orchestrator {
         }
     }
 
-    // see if possible to return last non achieved timeout so we can sleep for that duration
+    // TODO: see if possible to return last non achieved timeout so we can sleep for that duration
     fn detect_timeouts(&mut self) {
         if self.deadlines.is_empty() {
             return;
@@ -94,13 +92,12 @@ impl Orchestrator {
         }
     }
 
-    pub fn push_worker(&mut self, worker: Worker) {
+    pub fn push_worker(&mut self, worker_id: u32) {
         // Managing timeouts
-        self.deadlines.push(Deadline::new(worker.id, self.timeout));
+        self.deadlines.push(Deadline::new(worker_id, self.timeout));
 
-        self.busy_workers.insert(worker.id);
-        println!("Adding worker {}", worker.id);
-        self.available_workers.push_back(worker);
+        println!("Adding worker {}", worker_id);
+        self.available_workers.push_back(worker_id);
 
         if self.available_workers.len() >= self.threshold as usize {
             self.low_capacity = false;
@@ -108,34 +105,34 @@ impl Orchestrator {
         self.empty = false;
     }
 
-    pub fn pull_worker(&mut self) -> Worker {
+    pub fn pull_worker(&mut self) -> u32 {
         let wrapped_worker = self.available_workers.pop_front();
-        let worker;
+        let worker_id;
         match wrapped_worker {
-            Some(value) => worker = value,
+            Some(value) => worker_id = value,
             None => panic!("No workers available"),
         }
 
-        self.busy_workers.remove(&worker.id);
+        self.busy_workers.remove(&worker_id);
 
-        println!("Pulling worker {}", worker.id);
+        println!("Pulling worker {}", worker_id);
         if self.available_workers.len() < self.threshold as usize {
             self.low_capacity = true;
         }
 
-        worker
+        worker_id
     }
 
     pub fn get_worker_queue_size(&mut self) -> usize {
         self.available_workers.len()
     }
 
-    pub fn receive_result(&self, worker: Worker) -> (u32, u32, u32) {
+    pub fn receive_result(&self, worker_id: u32, task_result: u32) -> (u32, u32) {
         println!(
             "Received result from worker {} and task {}",
-            worker.id, worker.task
+            worker_id, task_result
         );
-        (worker.id, worker.task, worker.calculate())
+        (worker_id, task_result)
     }
 
     pub fn handle_timeout(&self, task_id: u32) {

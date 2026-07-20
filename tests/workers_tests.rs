@@ -6,17 +6,17 @@ mod worker_test {
     use std::sync::mpsc;
 
     #[test]
-    fn check_workers_busy() {
+    fn check_available_workers() {
         let (tx, rx) = mpsc::channel::<Event>();
         let mut orchestrator = Orchestrator::new(1, rx, 5, 3, 30, 30);
 
-        assert_eq!(orchestrator.busy_workers.len(), 0);
+        assert_eq!(orchestrator.available_workers.len(), 0);
         orchestrator.initialise();
-        assert_eq!(orchestrator.busy_workers.len(), 5);
+        assert_eq!(orchestrator.available_workers.len(), 5);
 
         for _n in 1..3 {
             orchestrator.pull_worker();
         }
-        assert_eq!(orchestrator.busy_workers.len(), 3);
+        assert_eq!(orchestrator.available_workers.len(), 3);
     }
 }
