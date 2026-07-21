@@ -1,4 +1,4 @@
-use crate::components::event::Event;
+use crate::components::event::TaskEvent;
 use crate::components::timer::Deadline;
 
 use std::collections::BinaryHeap;
@@ -19,13 +19,13 @@ pub struct Orchestrator {
     pub timeout: u64,
     pub check_frequency: u64,
     pub deadlines: BinaryHeap<Deadline>,
-    events_receiver: mpsc::Receiver<Event>,
+    events_receiver: mpsc::Receiver<TaskEvent>,
 }
 
 impl Orchestrator {
     pub fn new(
         id: u32,
-        events_receiver: mpsc::Receiver<Event>,
+        events_receiver: mpsc::Receiver<TaskEvent>,
         initial_capacity: usize,
         threshold: u32,
         timeout: u64,
@@ -62,12 +62,12 @@ impl Orchestrator {
         loop {
             while let Ok(event) = self.events_receiver.try_recv() {
                 match event {
-                    Event::Timeout(id) => self.handle_timeout(id),
-                    Event::TaskFinished(result) => println!(
+                    TaskEvent::TaskMissing(timeout) => self.handle_timeout(timeout.id),
+                    TaskEvent::TaskFinished(result) => println!(
                         "self.handle_result(result) with id {} and result {}",
                         result.id, result.result
                     ),
-                    Event::NewTask(task) => println!(
+                    TaskEvent::NewTask(task) => println!(
                         "self.add_task(task) with id {} and input {}",
                         task.id, task.input
                     ),

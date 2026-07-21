@@ -1,9 +1,9 @@
-pub struct Task {
+pub struct TaskInput {
     pub id: u32,
     pub input: u32,
 }
 
-impl Task {
+impl TaskInput {
     pub fn new(id: u32, input: u32) -> Self {
         Self {
             id: id,
@@ -23,5 +23,15 @@ impl TaskResult {
             id: id,
             result: result,
         }
+    }
+}
+
+pub struct TimeOut {
+    pub id: u32,
+}
+
+impl TimeOut {
+    pub fn new(id: u32) -> Self {
+        Self { id: id }
     }
 }

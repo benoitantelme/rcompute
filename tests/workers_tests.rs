@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod worker_test {
-    use rcompute::components::event::Event;
+    use rcompute::components::event::TaskEvent;
     use rcompute::components::worker::Worker;
 
     use std::sync::mpsc;
@@ -8,7 +8,7 @@ mod worker_test {
 
     #[test]
     fn test_workers() {
-        let (tx, rx) = mpsc::channel::<Event>();
+        let (tx, rx) = mpsc::channel::<TaskEvent>();
         let worker = Worker::new(1, 1, tx);
         println!("{}", worker.to_string());
         worker.calculate();
@@ -16,7 +16,7 @@ mod worker_test {
 
         let event = rx.recv().unwrap();
         match event {
-            Event::TaskFinished(result) => {
+            TaskEvent::TaskFinished(result) => {
                 assert_eq!(result.id, 1);
                 assert_eq!(result.result, 42);
             }

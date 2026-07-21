@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod simple_components_test {
-    use rcompute::components::event::Event;
+    use rcompute::components::event::TaskEvent;
     use rcompute::components::orchestrator::Orchestrator;
     use rcompute::components::worker::Worker;
 
@@ -8,7 +8,7 @@ mod simple_components_test {
 
     #[test]
     fn instantiation() {
-        let (tx, rx) = mpsc::channel::<Event>();
+        let (tx, rx) = mpsc::channel::<TaskEvent>();
         let orchestrator = Orchestrator::new(1, rx, 10, 3, 30, 30);
         assert_eq!(orchestrator.id, 1);
         assert_eq!(orchestrator.threshold, 3);
@@ -22,7 +22,7 @@ mod simple_components_test {
 
     #[test]
     fn queuing() {
-        let (_tx, rx) = mpsc::channel::<Event>();
+        let (_tx, rx) = mpsc::channel::<TaskEvent>();
         let mut orchestrator = Orchestrator::new(1, rx, 10, 3, 30, 30);
 
         for n in 1..5 {

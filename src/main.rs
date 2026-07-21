@@ -1,4 +1,4 @@
-use rcompute::components::event::Event;
+use rcompute::components::event::TaskEvent;
 use rcompute::components::orchestrator::Orchestrator;
 use rcompute::components::worker::Worker;
 use rcompute::config::app_config::AppConfig;
@@ -8,7 +8,7 @@ use std::time::Duration;
 
 fn main() {
     let config: AppConfig = AppConfig::new();
-    let (tx, rx) = mpsc::channel::<Event>();
+    let (tx, rx) = mpsc::channel::<TaskEvent>();
     let mut orchestrator = Orchestrator::new(
         1,
         rx,
