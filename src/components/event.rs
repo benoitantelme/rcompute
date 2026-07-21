@@ -10,18 +10,21 @@ pub enum TaskEvent {
 }
 
 // Observability related events between orchestrator/workers and monitor
-pub struct Event {
-    id: u32,
-    timestamp: SystemTime,
-    source: Source,
-    payload: EventPayload,
+#[derive(Clone)]
+pub struct MonitorEvent {
+    pub id: u32,
+    pub timestamp: SystemTime,
+    pub source: Source,
+    pub payload: EventPayload,
 }
 
+#[derive(Clone)]
 pub enum Source {
     Orchestrator,
     Worker(u32),
 }
 
+#[derive(Clone)]
 pub enum EventPayload {
     TaskAssigned { task_id: u32 },
     TaskStarted { task_id: u32 },
