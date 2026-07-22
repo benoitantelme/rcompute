@@ -1,15 +1,53 @@
+use crate::components::event::EventPayload;
 use crate::components::event::MonitorEvent;
 use crate::components::event::Source;
 
+use std::fmt;
 use std::sync::RwLock;
 use std::sync::mpsc;
+use std::time::Duration;
 
 pub struct Monitor {
+    id: u32,
     events: RwLock<Vec<MonitorEvent>>,
-    event_rx: mpsc::Receiver<MonitorEvent>,
+    receiver: mpsc::Receiver<MonitorEvent>,
 }
 
 impl Monitor {
+    pub fn new(id: u32, receiver: mpsc::Receiver<MonitorEvent>) -> Self {
+        Self {
+            id: id,
+            receiver: receiver,
+            events: RwLock::new(Vec::new()),
+        }
+    }
+
+    pub fn run(self) {
+        loop {
+            while let Ok(event) = self.receiver.try_recv() {
+                match &event.payload {
+                    EventPayload::TaskAssigned { task_id } => {
+                        println!("Task assigned {}", task_id);
+                    }
+                    EventPayload::TaskStarted { task_id } => {
+                        println!("Task started {}", task_id);
+                    }
+                    EventPayload::TaskCompleted { task_id } => {
+                        println!("Task completed {}", task_id);
+                    }
+                    EventPayload::TaskFailed { task_id, reason } => {
+                        println!("Task failed with id {} because {}", task_id, reason)
+                    }
+                }
+
+                let mut writable_events = self.events.write().unwrap();
+                writable_events.push(event);
+            }
+
+            std::thread::sleep(Duration::from_millis(5));
+        }
+    }
+
     pub async fn history(&self) -> Vec<MonitorEvent> {
         self.events.read().unwrap().clone()
     }
@@ -30,5 +68,11 @@ impl Monitor {
                 _ => None,
             })
             .collect()
+    }
+}
+
+impl fmt::Display for Monitor {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Monitor id {}", self.id)
     }
 }
