@@ -3,15 +3,14 @@ use crate::components::event::MonitorEvent;
 use crate::components::event::Source;
 
 use std::fmt;
-use std::sync::RwLock;
-use std::sync::mpsc;
+use std::sync::{Arc, RwLock, mpsc};
 use std::time::Duration;
 
 const MONITOR: &str = "Monitor: ";
 
 pub struct Monitor {
-    id: u32,
-    events: RwLock<Vec<MonitorEvent>>,
+    pub id: u32,
+    pub events: Arc<RwLock<Vec<MonitorEvent>>>,
     receiver: mpsc::Receiver<MonitorEvent>,
 }
 
@@ -20,7 +19,7 @@ impl Monitor {
         Self {
             id: id,
             receiver: receiver,
-            events: RwLock::new(Vec::new()),
+            events: Arc::new(RwLock::new(Vec::new())),
         }
     }
 
@@ -54,7 +53,8 @@ impl Monitor {
         }
     }
 
-    pub async fn history(&self) -> Vec<MonitorEvent> {
+    // async?
+    pub fn history(&self) -> Vec<MonitorEvent> {
         println!("{} {} returning history", MONITOR, self.id);
         self.events.read().unwrap().clone()
     }

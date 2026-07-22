@@ -35,9 +35,6 @@ impl Worker {
     pub fn calculate(&self) -> u32 {
         println!("{} id {} is calculating", WORKER, self.id);
 
-        self.tasks_events_sender
-            .send(TaskEvent::TaskFinished(TaskResult::new(self.task, 42)))
-            .unwrap();
         self.monitor_events_sender
             .send(MonitorEvent::new(
                 self.id,
@@ -45,6 +42,10 @@ impl Worker {
                 Source::Worker(self.id),
                 EventPayload::TaskCompleted { task_id: self.task },
             ))
+            .unwrap();
+
+        self.tasks_events_sender
+            .send(TaskEvent::TaskFinished(TaskResult::new(self.task, 42)))
             .unwrap();
 
         return 42;

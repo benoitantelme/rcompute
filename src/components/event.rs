@@ -29,13 +29,13 @@ impl MonitorEvent {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Source {
     Orchestrator,
     Worker(u32),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum EventPayload {
     TaskAssigned { task_id: u32 },
     TaskStarted { task_id: u32 },
