@@ -18,26 +18,34 @@ It will be ''locally'' distributed first.
                  |     main /     |
                  |   observator   |
                  +----------------+
-                          |
-                          | spawn
-                          v
-               +---------------------+
-               |    Orchestrator     |
-               |---------------------|
-               | owns all states     |
-               | Receiver<Event>     |
-               +---------------------+
-                    ^     ^      ^
-                    |     |      |
-              Sender|     |Sender|Sender
-                    |     |      |
-          +---------+     |      +---------+
+                     ^    ^
+                     |    |
+          + ---------+    | 
+          |               |
+          |     +---------------------+
+          |     |    Orchestrator     |
+          |     |---------------------|
+          |     | owns all states     |
+          |     | Receiver<Event>     |
+          |     +---------------------+
+          |        ^      ^      ^
+          |        |      |      |
+          |   Send | Send | Send |
+          |        |      |      |
+          +--------+      |      +---------+
           |               |                |
      Worker 1        Worker 2        Timer Thread
 
 ---
 
 ## 3. Components
+
+### Monitor
+
+Responsibilities:
+
+- Receives events from other actors.
+- Keep an ordered history of the events.
 
 ### Orchestrator
 
@@ -50,6 +58,7 @@ Responsibilities:
 - Detect worker timeouts and execution failures.
 - Reassign failed or timed-out tasks.
 - Monitor worker availability.
+- Communicate events with the monitor.
 
 ### Worker
 
@@ -61,6 +70,7 @@ Responsibilities:
 - Return either:
   - A successful result.
   - An execution error.
+- Communicate events with the monitor.
 
 ---
 

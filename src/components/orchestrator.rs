@@ -1,4 +1,5 @@
-use crate::components::event::Event;
+use crate::components::event::{EventPayload, MonitorEvent, Source, TaskEvent};
+use crate::components::task::{TaskInput, TaskResult};
 use crate::components::timer::Deadline;
 
 use std::collections::BinaryHeap;
@@ -6,7 +7,8 @@ use std::collections::HashSet;
 use std::collections::VecDeque;
 use std::fmt;
 use std::sync::mpsc;
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
+const ORCHESTRATOR: &str = "Orchestrator: ";
 
 pub struct Orchestrator {
     pub id: u32,
@@ -19,13 +21,15 @@ pub struct Orchestrator {
     pub timeout: u64,
     pub check_frequency: u64,
     pub deadlines: BinaryHeap<Deadline>,
-    events_receiver: mpsc::Receiver<Event>,
+    task_events_receiver: mpsc::Receiver<TaskEvent>,
+    monitor_events_sender: mpsc::Sender<MonitorEvent>,
 }
 
 impl Orchestrator {
     pub fn new(
         id: u32,
-        events_receiver: mpsc::Receiver<Event>,
+        monitor_events_sender: mpsc::Sender<MonitorEvent>,
+        task_events_receiver: mpsc::Receiver<TaskEvent>,
         initial_capacity: usize,
         threshold: u32,
         timeout: u64,
@@ -33,7 +37,8 @@ impl Orchestrator {
     ) -> Self {
         Self {
             id: id,
-            events_receiver: events_receiver,
+            monitor_events_sender: monitor_events_sender,
+            task_events_receiver: task_events_receiver,
             threshold: threshold,
             initial_capacity: initial_capacity,
             low_capacity: true,
@@ -52,7 +57,8 @@ impl Orchestrator {
         }
 
         println!(
-            "Orchestrator {} initialised with {} workers",
+            "{} {} initialised with {} workers",
+            ORCHESTRATOR,
             self.id,
             self.available_workers.len()
         );
@@ -60,42 +66,16 @@ impl Orchestrator {
 
     pub fn run(mut self) {
         loop {
-            while let Ok(event) = self.events_receiver.try_recv() {
+            while let Ok(event) = self.task_events_receiver.try_recv() {
                 match event {
-                    Event::Timeout(id) => self.handle_timeout(id),
-                    Event::TaskFinished(result) => println!(
-                        "self.handle_result(result) with id {} and result {}",
-                        result.id, result.result
-                    ),
-                    Event::NewTask(task) => println!(
-                        "self.add_task(task) with id {} and input {}",
-                        task.id, task.input
-                    ),
+                    TaskEvent::TaskMissing(timeout) => self.handle_timeout(timeout.id),
+                    TaskEvent::TaskFinished(result) => self.handle_task_result(result),
+                    TaskEvent::NewTask(task) => self.handle_task_creation(task),
                 }
             }
 
             self.detect_timeouts();
-
-            // TODO: do we need schedule?
-            // self.schedule();
             std::thread::sleep(Duration::from_millis(10));
-        }
-    }
-
-    // TODO: see if possible to return last non achieved timeout so we can sleep for that duration
-    fn detect_timeouts(&mut self) {
-        if self.deadlines.is_empty() {
-            return;
-        }
-
-        while let Some(deadline) = self.deadlines.peek() {
-            if deadline.is_expired() {
-                let expired = self.deadlines.pop().unwrap();
-                println!("Deadline reached for task {}", expired.task_id);
-                self.handle_timeout(expired.task_id);
-            } else {
-                break;
-            }
         }
     }
 
@@ -103,7 +83,7 @@ impl Orchestrator {
         // Managing timeouts
         self.deadlines.push(Deadline::new(worker_id, self.timeout));
 
-        println!("Adding worker {}", worker_id);
+        println!("{} Adding worker {}", ORCHESTRATOR, worker_id);
         self.available_workers.push_back(worker_id);
 
         if self.available_workers.len() >= self.threshold as usize {
@@ -117,12 +97,12 @@ impl Orchestrator {
         let worker_id;
         match wrapped_worker {
             Some(value) => worker_id = value,
-            None => panic!("No workers available"),
+            None => panic!("{} No workers available", ORCHESTRATOR),
         }
 
         self.busy_workers.remove(&worker_id);
 
-        println!("Pulling worker {}", worker_id);
+        println!("{} Pulling worker {}", ORCHESTRATOR, worker_id);
         if self.available_workers.len() < self.threshold as usize {
             self.low_capacity = true;
         }
@@ -136,21 +116,85 @@ impl Orchestrator {
 
     pub fn receive_result(&self, worker_id: u32, task_result: u32) -> (u32, u32) {
         println!(
-            "Received result from worker {} and task {}",
-            worker_id, task_result
+            "{} Received result from worker {} and task {}",
+            ORCHESTRATOR, worker_id, task_result
         );
         (worker_id, task_result)
     }
 
+    // TODO: see if possible to return last non achieved timeout so we can sleep for that duration
+    fn detect_timeouts(&mut self) {
+        if self.deadlines.is_empty() {
+            return;
+        }
+
+        while let Some(deadline) = self.deadlines.peek() {
+            if deadline.is_expired() {
+                let expired = self.deadlines.pop().unwrap();
+                println!(
+                    "{} Deadline reached for task {}",
+                    ORCHESTRATOR, expired.task_id
+                );
+                self.handle_timeout(expired.task_id);
+            } else {
+                break;
+            }
+        }
+    }
+
     pub fn handle_timeout(&self, task_id: u32) {
-        println!("Received timeout for id {} ", task_id);
+        println!("{} Received timeout for id {} ", ORCHESTRATOR, task_id);
+
+        self.monitor_events_sender
+            .send(MonitorEvent::new(
+                self.id,
+                SystemTime::now(),
+                Source::Orchestrator,
+                EventPayload::TaskFailed {
+                    task_id: task_id,
+                    reason: "Timeout".to_string(),
+                },
+            ))
+            .unwrap();
 
         //TODO: Handle timeout logic here, reset task, keep a trace of already failed task, loose worker ref?
+    }
+
+    pub fn handle_task_result(&self, result: TaskResult) {
+        println!(
+            "{} Received result with id {} and content {}",
+            ORCHESTRATOR, result.id, result.result
+        );
+
+        self.monitor_events_sender
+            .send(MonitorEvent::new(
+                self.id,
+                SystemTime::now(),
+                Source::Orchestrator,
+                EventPayload::TaskCompleted { task_id: result.id },
+            ))
+            .unwrap();
+    }
+
+    pub fn handle_task_creation(&self, task: TaskInput) {
+        println!(
+            "{} Created task with id {} and input {}",
+            ORCHESTRATOR, task.id, task.input
+        );
+
+        self.monitor_events_sender
+            .send(MonitorEvent::new(
+                self.id,
+                SystemTime::now(),
+                Source::Orchestrator,
+                EventPayload::TaskStarted { task_id: task.id },
+            ))
+            .unwrap();
     }
 }
 
 impl fmt::Display for Orchestrator {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Orchestrator id {}", self.id)
+        write!(f, "{} id {}", ORCHESTRATOR, self.id)
     }
 }
