@@ -1,5 +1,5 @@
-use crate::components::event::MonitorEvent;
-use crate::components::event::TaskEvent;
+use crate::components::event::{EventPayload, MonitorEvent, Source, TaskEvent};
+use crate::components::task::{TaskInput, TaskResult};
 use crate::components::timer::Deadline;
 
 use std::collections::BinaryHeap;
@@ -7,8 +7,7 @@ use std::collections::HashSet;
 use std::collections::VecDeque;
 use std::fmt;
 use std::sync::mpsc;
-use std::time::Duration;
-
+use std::time::{Duration, SystemTime};
 const ORCHESTRATOR: &str = "Orchestrator: ";
 
 pub struct Orchestrator {
@@ -70,42 +69,13 @@ impl Orchestrator {
             while let Ok(event) = self.task_events_receiver.try_recv() {
                 match event {
                     TaskEvent::TaskMissing(timeout) => self.handle_timeout(timeout.id),
-                    TaskEvent::TaskFinished(result) => println!(
-                        "{} self.handle_result(result) with id {} and result {}",
-                        ORCHESTRATOR, result.id, result.result
-                    ),
-                    TaskEvent::NewTask(task) => println!(
-                        "s{} elf.add_task(task) with id {} and input {}",
-                        ORCHESTRATOR, task.id, task.input
-                    ),
+                    TaskEvent::TaskFinished(result) => self.handle_task_result(result),
+                    TaskEvent::NewTask(task) => self.handle_task_creation(task),
                 }
             }
 
             self.detect_timeouts();
-
-            // TODO: do we need schedule?
-            // self.schedule();
             std::thread::sleep(Duration::from_millis(10));
-        }
-    }
-
-    // TODO: see if possible to return last non achieved timeout so we can sleep for that duration
-    fn detect_timeouts(&mut self) {
-        if self.deadlines.is_empty() {
-            return;
-        }
-
-        while let Some(deadline) = self.deadlines.peek() {
-            if deadline.is_expired() {
-                let expired = self.deadlines.pop().unwrap();
-                println!(
-                    "{} Deadline reached for task {}",
-                    ORCHESTRATOR, expired.task_id
-                );
-                self.handle_timeout(expired.task_id);
-            } else {
-                break;
-            }
         }
     }
 
@@ -152,10 +122,74 @@ impl Orchestrator {
         (worker_id, task_result)
     }
 
+    // TODO: see if possible to return last non achieved timeout so we can sleep for that duration
+    fn detect_timeouts(&mut self) {
+        if self.deadlines.is_empty() {
+            return;
+        }
+
+        while let Some(deadline) = self.deadlines.peek() {
+            if deadline.is_expired() {
+                let expired = self.deadlines.pop().unwrap();
+                println!(
+                    "{} Deadline reached for task {}",
+                    ORCHESTRATOR, expired.task_id
+                );
+                self.handle_timeout(expired.task_id);
+            } else {
+                break;
+            }
+        }
+    }
+
     pub fn handle_timeout(&self, task_id: u32) {
         println!("{} Received timeout for id {} ", ORCHESTRATOR, task_id);
 
+        self.monitor_events_sender
+            .send(MonitorEvent::new(
+                self.id,
+                SystemTime::now(),
+                Source::Orchestrator,
+                EventPayload::TaskFailed {
+                    task_id: task_id,
+                    reason: "Timeout".to_string(),
+                },
+            ))
+            .unwrap();
+
         //TODO: Handle timeout logic here, reset task, keep a trace of already failed task, loose worker ref?
+    }
+
+    pub fn handle_task_result(&self, result: TaskResult) {
+        println!(
+            "{} Received result with id {} and content {}",
+            ORCHESTRATOR, result.id, result.result
+        );
+
+        self.monitor_events_sender
+            .send(MonitorEvent::new(
+                self.id,
+                SystemTime::now(),
+                Source::Orchestrator,
+                EventPayload::TaskCompleted { task_id: result.id },
+            ))
+            .unwrap();
+    }
+
+    pub fn handle_task_creation(&self, task: TaskInput) {
+        println!(
+            "{} Created task with id {} and input {}",
+            ORCHESTRATOR, task.id, task.input
+        );
+
+        self.monitor_events_sender
+            .send(MonitorEvent::new(
+                self.id,
+                SystemTime::now(),
+                Source::Orchestrator,
+                EventPayload::TaskStarted { task_id: task.id },
+            ))
+            .unwrap();
     }
 }
 
