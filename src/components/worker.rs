@@ -8,6 +8,8 @@ use std::fmt;
 use std::sync::mpsc;
 use std::time::SystemTime;
 
+const WORKER: &str = "Worker: ";
+
 pub struct Worker {
     pub id: u32,
     pub task: u32,
@@ -31,7 +33,7 @@ impl Worker {
     }
 
     pub fn calculate(&self) -> u32 {
-        println!("Worker id {} is calculating", self.id);
+        println!("{} id {} is calculating", WORKER, self.id);
 
         self.tasks_events_sender
             .send(TaskEvent::TaskFinished(TaskResult::new(self.task, 42)))
@@ -51,6 +53,6 @@ impl Worker {
 
 impl fmt::Display for Worker {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Worker id {}", self.id)
+        write!(f, "{} id {}", WORKER, self.id)
     }
 }

@@ -8,6 +8,8 @@ use std::fmt;
 use std::sync::mpsc;
 use std::time::Duration;
 
+const ORCHESTRATOR: &str = "Orchestrator: ";
+
 pub struct Orchestrator {
     pub id: u32,
     initial_capacity: usize,
@@ -52,7 +54,8 @@ impl Orchestrator {
         }
 
         println!(
-            "Orchestrator {} initialised with {} workers",
+            "{} {} initialised with {} workers",
+            ORCHESTRATOR,
             self.id,
             self.available_workers.len()
         );
@@ -64,12 +67,12 @@ impl Orchestrator {
                 match event {
                     TaskEvent::TaskMissing(timeout) => self.handle_timeout(timeout.id),
                     TaskEvent::TaskFinished(result) => println!(
-                        "self.handle_result(result) with id {} and result {}",
-                        result.id, result.result
+                        "{} self.handle_result(result) with id {} and result {}",
+                        ORCHESTRATOR, result.id, result.result
                     ),
                     TaskEvent::NewTask(task) => println!(
-                        "self.add_task(task) with id {} and input {}",
-                        task.id, task.input
+                        "s{} elf.add_task(task) with id {} and input {}",
+                        ORCHESTRATOR, task.id, task.input
                     ),
                 }
             }
@@ -91,7 +94,10 @@ impl Orchestrator {
         while let Some(deadline) = self.deadlines.peek() {
             if deadline.is_expired() {
                 let expired = self.deadlines.pop().unwrap();
-                println!("Deadline reached for task {}", expired.task_id);
+                println!(
+                    "{} Deadline reached for task {}",
+                    ORCHESTRATOR, expired.task_id
+                );
                 self.handle_timeout(expired.task_id);
             } else {
                 break;
@@ -103,7 +109,7 @@ impl Orchestrator {
         // Managing timeouts
         self.deadlines.push(Deadline::new(worker_id, self.timeout));
 
-        println!("Adding worker {}", worker_id);
+        println!("{} Adding worker {}", ORCHESTRATOR, worker_id);
         self.available_workers.push_back(worker_id);
 
         if self.available_workers.len() >= self.threshold as usize {
@@ -117,12 +123,12 @@ impl Orchestrator {
         let worker_id;
         match wrapped_worker {
             Some(value) => worker_id = value,
-            None => panic!("No workers available"),
+            None => panic!("{} No workers available", ORCHESTRATOR),
         }
 
         self.busy_workers.remove(&worker_id);
 
-        println!("Pulling worker {}", worker_id);
+        println!("{} Pulling worker {}", ORCHESTRATOR, worker_id);
         if self.available_workers.len() < self.threshold as usize {
             self.low_capacity = true;
         }
@@ -136,14 +142,14 @@ impl Orchestrator {
 
     pub fn receive_result(&self, worker_id: u32, task_result: u32) -> (u32, u32) {
         println!(
-            "Received result from worker {} and task {}",
-            worker_id, task_result
+            "{} Received result from worker {} and task {}",
+            ORCHESTRATOR, worker_id, task_result
         );
         (worker_id, task_result)
     }
 
     pub fn handle_timeout(&self, task_id: u32) {
-        println!("Received timeout for id {} ", task_id);
+        println!("{} Received timeout for id {} ", ORCHESTRATOR, task_id);
 
         //TODO: Handle timeout logic here, reset task, keep a trace of already failed task, loose worker ref?
     }
@@ -151,6 +157,6 @@ impl Orchestrator {
 
 impl fmt::Display for Orchestrator {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Orchestrator id {}", self.id)
+        write!(f, "{} id {}", ORCHESTRATOR, self.id)
     }
 }

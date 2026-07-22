@@ -7,6 +7,8 @@ use std::sync::RwLock;
 use std::sync::mpsc;
 use std::time::Duration;
 
+const MONITOR: &str = "Monitor: ";
+
 pub struct Monitor {
     id: u32,
     events: RwLock<Vec<MonitorEvent>>,
@@ -28,16 +30,19 @@ impl Monitor {
             while let Ok(event) = self.receiver.try_recv() {
                 match &event.payload {
                     EventPayload::TaskAssigned { task_id } => {
-                        println!("Task assigned {}", task_id);
+                        println!("{}Task assigned {}", MONITOR, task_id);
                     }
                     EventPayload::TaskStarted { task_id } => {
-                        println!("Task started {}", task_id);
+                        println!("{}Task started {}", MONITOR, task_id);
                     }
                     EventPayload::TaskCompleted { task_id } => {
-                        println!("Task completed {}", task_id);
+                        println!("{}Task completed {}", MONITOR, task_id);
                     }
                     EventPayload::TaskFailed { task_id, reason } => {
-                        println!("Task failed with id {} because {}", task_id, reason)
+                        println!(
+                            "{}Task failed with id {} because {}",
+                            MONITOR, task_id, reason
+                        )
                     }
                 }
 
@@ -50,14 +55,14 @@ impl Monitor {
     }
 
     pub async fn history(&self) -> Vec<MonitorEvent> {
-        println!("Monitor {} returning history", self.id);
+        println!("{} {} returning history", MONITOR, self.id);
         self.events.read().unwrap().clone()
     }
 
     pub async fn events_from_worker(&self, worker_id: u32) -> Vec<MonitorEvent> {
         println!(
-            "Monitor {} returning history for worker {}",
-            self.id, worker_id
+            "{} {} returning history for worker {}",
+            MONITOR, self.id, worker_id
         );
         let snapshot = self.events.read().unwrap().clone();
 
@@ -79,6 +84,6 @@ impl Monitor {
 
 impl fmt::Display for Monitor {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Monitor id {}", self.id)
+        write!(f, "{} id {}", MONITOR, self.id)
     }
 }
