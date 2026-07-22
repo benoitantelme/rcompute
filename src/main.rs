@@ -18,6 +18,7 @@ fn main() {
     let (task_tx, task_rx) = mpsc::channel::<TaskEvent>();
     let mut orchestrator = Orchestrator::new(
         1,
+        monitor_tx.clone(),
         task_rx,
         config.workers_number,
         config.workers_threshold,

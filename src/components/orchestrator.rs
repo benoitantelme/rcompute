@@ -1,3 +1,4 @@
+use crate::components::event::MonitorEvent;
 use crate::components::event::TaskEvent;
 use crate::components::timer::Deadline;
 
@@ -21,13 +22,15 @@ pub struct Orchestrator {
     pub timeout: u64,
     pub check_frequency: u64,
     pub deadlines: BinaryHeap<Deadline>,
-    events_receiver: mpsc::Receiver<TaskEvent>,
+    task_events_receiver: mpsc::Receiver<TaskEvent>,
+    monitor_events_sender: mpsc::Sender<MonitorEvent>,
 }
 
 impl Orchestrator {
     pub fn new(
         id: u32,
-        events_receiver: mpsc::Receiver<TaskEvent>,
+        monitor_events_sender: mpsc::Sender<MonitorEvent>,
+        task_events_receiver: mpsc::Receiver<TaskEvent>,
         initial_capacity: usize,
         threshold: u32,
         timeout: u64,
@@ -35,7 +38,8 @@ impl Orchestrator {
     ) -> Self {
         Self {
             id: id,
-            events_receiver: events_receiver,
+            monitor_events_sender: monitor_events_sender,
+            task_events_receiver: task_events_receiver,
             threshold: threshold,
             initial_capacity: initial_capacity,
             low_capacity: true,
@@ -63,7 +67,7 @@ impl Orchestrator {
 
     pub fn run(mut self) {
         loop {
-            while let Ok(event) = self.events_receiver.try_recv() {
+            while let Ok(event) = self.task_events_receiver.try_recv() {
                 match event {
                     TaskEvent::TaskMissing(timeout) => self.handle_timeout(timeout.id),
                     TaskEvent::TaskFinished(result) => println!(

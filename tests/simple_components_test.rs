@@ -9,8 +9,9 @@ mod simple_components_test {
 
     #[test]
     fn instantiation() {
+        let (monitor_tx, _monitor_rx) = mpsc::channel::<MonitorEvent>();
         let (task_tx, task_rx) = mpsc::channel::<TaskEvent>();
-        let orchestrator = Orchestrator::new(1, task_rx, 10, 3, 30, 30);
+        let orchestrator = Orchestrator::new(1, monitor_tx.clone(), task_rx, 10, 3, 30, 30);
         assert_eq!(orchestrator.id, 1);
         assert_eq!(orchestrator.threshold, 3);
         assert_eq!(orchestrator.timeout, 30);
@@ -24,8 +25,9 @@ mod simple_components_test {
 
     #[test]
     fn queuing() {
+        let (monitor_tx, _monitor_rx) = mpsc::channel::<MonitorEvent>();
         let (_tx, rx) = mpsc::channel::<TaskEvent>();
-        let mut orchestrator = Orchestrator::new(1, rx, 10, 3, 30, 30);
+        let mut orchestrator = Orchestrator::new(1, monitor_tx.clone(), rx, 10, 3, 30, 30);
 
         for n in 1..5 {
             orchestrator.push_worker(n);

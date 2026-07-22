@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod timer_test {
+    use rcompute::components::event::MonitorEvent;
     use rcompute::components::event::TaskEvent;
     use rcompute::components::orchestrator::Orchestrator;
     use rcompute::components::timer::Deadline;
@@ -26,8 +27,9 @@ mod timer_test {
 
     #[test]
     fn check_ordering() {
+        let (monitor_tx, _monitor_rx) = mpsc::channel::<MonitorEvent>();
         let (_tx, rx) = mpsc::channel::<TaskEvent>();
-        let mut orchestrator = Orchestrator::new(1, rx, 5, 3, 30, 30);
+        let mut orchestrator = Orchestrator::new(1, monitor_tx.clone(), rx, 5, 3, 30, 30);
         orchestrator.initialise();
 
         for n in 1..5 {
@@ -43,10 +45,11 @@ mod timer_test {
 
     #[test]
     fn orchestrator_timeouts() {
+        let (monitor_tx, _monitor_rx) = mpsc::channel::<MonitorEvent>();
         let (_tx, rx) = mpsc::channel::<TaskEvent>();
         // TODO: This test is currently failing because the orchestrator is not handling timeouts correctly. We need to fix the timeout
         // handling in the orchestrator before this test can pass. This will be done later with timeouts messages
-        let mut orchestrator = Orchestrator::new(1, rx, 5, 3, 30, 30);
+        let mut orchestrator = Orchestrator::new(1, monitor_tx.clone(), rx, 5, 3, 30, 30);
         orchestrator.initialise();
         std::thread::spawn(move || orchestrator.run());
 
