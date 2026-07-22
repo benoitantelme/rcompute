@@ -1,29 +1,50 @@
+use crate::components::event::EventPayload;
+use crate::components::event::MonitorEvent;
+use crate::components::event::Source;
 use crate::components::event::TaskEvent;
 use crate::components::task::TaskResult;
 
 use std::fmt;
 use std::sync::mpsc;
+use std::time::SystemTime;
 
 pub struct Worker {
     pub id: u32,
     pub task: u32,
-    events_sender: mpsc::Sender<TaskEvent>,
+    tasks_events_sender: mpsc::Sender<TaskEvent>,
+    monitor_events_sender: mpsc::Sender<MonitorEvent>,
 }
 
 impl Worker {
-    pub fn new(id: u32, task: u32, sender: mpsc::Sender<TaskEvent>) -> Self {
+    pub fn new(
+        id: u32,
+        task: u32,
+        t_sender: mpsc::Sender<TaskEvent>,
+        m_sender: mpsc::Sender<MonitorEvent>,
+    ) -> Self {
         Self {
             id: id,
             task: task,
-            events_sender: sender,
+            tasks_events_sender: t_sender,
+            monitor_events_sender: m_sender,
         }
     }
 
     pub fn calculate(&self) -> u32 {
         println!("Worker id {} is calculating", self.id);
-        self.events_sender
+
+        self.tasks_events_sender
             .send(TaskEvent::TaskFinished(TaskResult::new(self.task, 42)))
             .unwrap();
+        self.monitor_events_sender
+            .send(MonitorEvent::new(
+                self.id,
+                SystemTime::now(),
+                Source::Worker(self.id),
+                EventPayload::TaskCompleted { task_id: self.task },
+            ))
+            .unwrap();
+
         return 42;
     }
 }

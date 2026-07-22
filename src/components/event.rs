@@ -18,6 +18,17 @@ pub struct MonitorEvent {
     pub payload: EventPayload,
 }
 
+impl MonitorEvent {
+    pub fn new(id: u32, timestamp: SystemTime, source: Source, payload: EventPayload) -> Self {
+        Self {
+            id: id,
+            timestamp: timestamp,
+            source: source,
+            payload: payload,
+        }
+    }
+}
+
 #[derive(Clone)]
 pub enum Source {
     Orchestrator,

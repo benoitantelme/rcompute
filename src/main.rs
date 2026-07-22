@@ -29,7 +29,7 @@ fn main() {
 
     std::thread::spawn(move || orchestrator.run());
 
-    let worker = Worker::new(1, 1, task_tx);
+    let worker = Worker::new(1, 1, task_tx.clone(), monitor_tx.clone());
     println!("{}", worker.to_string());
     worker.calculate();
     std::thread::sleep(Duration::from_millis(10));
