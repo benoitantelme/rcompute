@@ -10,7 +10,7 @@ mod timer_test {
 
     #[test]
     fn check_expiration() {
-        let deadline = Deadline::new(1, 100);
+        let deadline = Deadline::new(42, 1, 100);
         assert_eq!(deadline.is_expired(), false);
         thread::sleep(time::Duration::from_millis(10));
         assert_eq!(deadline.is_expired(), false);
@@ -20,7 +20,7 @@ mod timer_test {
 
     #[test]
     fn check_values() {
-        let deadline = Deadline::new(1, 100);
+        let deadline = Deadline::new(42, 1, 100);
         assert_eq!(deadline.task_id, 1);
         assert!(deadline.when < time::SystemTime::now() + time::Duration::from_millis(100));
     }
@@ -33,7 +33,7 @@ mod timer_test {
         orchestrator.initialise();
 
         for n in 1..5 {
-            let deadline = Deadline::new(n, n as u64 * 100);
+            let deadline = Deadline::new(42, n, n as u64 * 100);
             orchestrator.deadlines.push(deadline);
         }
 

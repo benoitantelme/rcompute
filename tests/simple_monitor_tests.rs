@@ -40,7 +40,8 @@ mod simple_monitor_test {
             assert_eq!(
                 failed.payload,
                 EventPayload::TaskFailed {
-                    task_id: 6 - n,
+                    task_id: 42,
+                    worker_id: 6 - n,
                     reason: "Timeout".to_string()
                 }
             );
@@ -50,11 +51,23 @@ mod simple_monitor_test {
         let second = history.pop().unwrap();
         assert_eq!(second.id, 1);
         assert_eq!(second.source, Source::Orchestrator);
-        assert_eq!(second.payload, EventPayload::TaskCompleted { task_id: 1 });
+        assert_eq!(
+            second.payload,
+            EventPayload::TaskCompleted {
+                task_id: 42,
+                worker_id: 1
+            }
+        );
 
         let first = history.pop().unwrap();
         assert_eq!(first.id, 1);
         assert_eq!(first.source, Source::Worker(1));
-        assert_eq!(first.payload, EventPayload::TaskCompleted { task_id: 1 });
+        assert_eq!(
+            first.payload,
+            EventPayload::TaskCompleted {
+                task_id: 42,
+                worker_id: 1
+            }
+        );
     }
 }

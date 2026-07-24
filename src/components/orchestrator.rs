@@ -1,5 +1,5 @@
-use crate::components::event::{EventPayload, MonitorEvent, Source, TaskEvent};
-use crate::components::task::{TaskInput, TaskResult};
+use crate::components::event::{EventPayload, MonitorEvent, Source};
+use crate::components::task::{TaskEvent, Task::{TaskInput, TaskResult, TaskTimeout}};
 use crate::components::timer::Deadline;
 
 use std::collections::BinaryHeap;
@@ -68,7 +68,13 @@ impl Orchestrator {
         loop {
             while let Ok(event) = self.task_events_receiver.try_recv() {
                 match event {
-                    TaskEvent::TaskMissing(timeout) => self.handle_timeout(timeout.id),
+                    TaskResult {
+                    id: self.task,
+                    result: 42,
+                }
+                    TaskTimeout{worker_id, timeout} => {
+                        self.handle_timeout(timeout.task_id, timeout.worker_id)
+                    }
                     TaskEvent::TaskFinished(result) => self.handle_task_result(result),
                     TaskEvent::NewTask(task) => self.handle_task_creation(task),
                 }
@@ -81,7 +87,9 @@ impl Orchestrator {
 
     pub fn push_worker(&mut self, worker_id: u32) {
         // Managing timeouts
-        self.deadlines.push(Deadline::new(worker_id, self.timeout));
+        // TODO: need to manage task separately later
+        self.deadlines
+            .push(Deadline::new(42, worker_id, self.timeout));
 
         println!("{} Adding worker {}", ORCHESTRATOR, worker_id);
         self.available_workers.push_back(worker_id);
@@ -135,14 +143,14 @@ impl Orchestrator {
                     "{} Deadline reached for task {}",
                     ORCHESTRATOR, expired.task_id
                 );
-                self.handle_timeout(expired.task_id);
+                self.handle_timeout(expired.task_id, expired.worker_id);
             } else {
                 break;
             }
         }
     }
 
-    pub fn handle_timeout(&self, task_id: u32) {
+    pub fn handle_timeout(&mut self, task_id: u32, worker_id: u32) {
         println!("{} Received timeout for id {} ", ORCHESTRATOR, task_id);
 
         self.monitor_events_sender
@@ -152,12 +160,23 @@ impl Orchestrator {
                 Source::Orchestrator,
                 EventPayload::TaskFailed {
                     task_id: task_id,
+                    worker_id: worker_id,
                     reason: "Timeout".to_string(),
                 },
             ))
             .unwrap();
 
-        //TODO: Handle timeout logic here, reset task, keep a trace of already failed task, loose worker ref?
+        match self.busy_workers.remove(&worker_id) {
+            true => {
+                println!(
+                    "{} Timeout for worker {} while it is still busy, removing from busy list",
+                    ORCHESTRATOR, worker_id
+                );
+
+                //TODO: keep a trace of already failed task, cancel calculation?
+            }
+            _ => {}
+        };
     }
 
     pub fn handle_task_result(&self, result: TaskResult) {
@@ -171,7 +190,7 @@ impl Orchestrator {
                 self.id,
                 SystemTime::now(),
                 Source::Orchestrator,
-                EventPayload::TaskCompleted { task_id: result.id },
+                EventPayload::TaskCompleted { task_id: result.id, worker_id: },
             ))
             .unwrap();
     }
