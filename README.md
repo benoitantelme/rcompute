@@ -10,7 +10,7 @@ Distributed computing in rust
 - [x] **Phase 4** — Worker discovery and lifecycle
 - [x] **Phase 5** — Refactoring as an actors like system for orchestrator and workers (TBC)
 - [X] **Phase 6** — Observability: as feature and for proper testing as well
-- [ ] **Phase 7** — Timeouts and deadlines
+- [X] **Phase 7** — Timeouts and deadlines
 - [ ] **Phase 8** — Task management and lifecycle
 - [ ] **Phase 9** — ......
 - [ ] **Phase 10** — ......
