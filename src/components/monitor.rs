@@ -28,19 +28,23 @@ impl Monitor {
         loop {
             while let Ok(event) = self.receiver.try_recv() {
                 match &event.payload {
-                    EventPayload::TaskAssigned { task_id } => {
-                        println!("{}Task assigned {}", MONITOR, task_id);
+                    EventPayload::TaskAssigned { task_id, worker_id } => {
+                        println!("{}Task assigned {} to {}", MONITOR, task_id, worker_id);
                     }
-                    EventPayload::TaskStarted { task_id } => {
-                        println!("{}Task started {}", MONITOR, task_id);
+                    EventPayload::TaskStarted { task_id, worker_id } => {
+                        println!("{}Task started {} by {}", MONITOR, task_id, worker_id);
                     }
-                    EventPayload::TaskCompleted { task_id } => {
-                        println!("{}Task completed {}", MONITOR, task_id);
+                    EventPayload::TaskCompleted { task_id, worker_id } => {
+                        println!("{}Task completed {} by {}", MONITOR, task_id, worker_id);
                     }
-                    EventPayload::TaskFailed { task_id, reason } => {
+                    EventPayload::TaskFailed {
+                        task_id,
+                        worker_id,
+                        reason,
+                    } => {
                         println!(
-                            "{}Task failed with id {} because {}",
-                            MONITOR, task_id, reason
+                            "{}Task failed with id {} by {} because {}",
+                            MONITOR, task_id, worker_id, reason
                         )
                     }
                 }
