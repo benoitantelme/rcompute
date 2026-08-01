@@ -5,12 +5,14 @@ use std::time::SystemTime;
 pub struct Deadline {
     pub when: SystemTime,
     pub task_id: u32,
+    pub worker_id: u32,
 }
 
 impl Deadline {
-    pub fn new(task_id: u32, timeout: u64) -> Self {
+    pub fn new(task_id: u32, worker_id: u32, timeout: u64) -> Self {
         Self {
             task_id: task_id,
+            worker_id: worker_id,
             when: SystemTime::now() + std::time::Duration::from_millis(timeout),
         }
     }

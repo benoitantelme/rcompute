@@ -1,8 +1,9 @@
 use crate::components::event::EventPayload;
 use crate::components::event::MonitorEvent;
 use crate::components::event::Source;
-use crate::components::event::TaskEvent;
-use crate::components::task::TaskResult;
+use crate::components::task::Task::TaskResult;
+use crate::components::task::Task::TaskTimeout;
+use crate::components::task::TaskEvent;
 
 use std::fmt;
 use std::sync::mpsc;
@@ -40,12 +41,42 @@ impl Worker {
                 self.id,
                 SystemTime::now(),
                 Source::Worker(self.id),
-                EventPayload::TaskCompleted { task_id: self.task },
+                EventPayload::TaskCompleted {
+                    task_id: self.task,
+                    worker_id: self.id,
+                },
             ))
             .unwrap();
 
         self.tasks_events_sender
-            .send(TaskEvent::TaskFinished(TaskResult::new(self.task, 42)))
+            .send(TaskEvent::new(
+                self.id,
+                self.task,
+                TaskResult { result: 42 },
+            ))
+            .unwrap();
+
+        return 42;
+    }
+
+    pub fn timeout(&self) -> u32 {
+        println!("{} id {} has timed out", WORKER, self.id);
+
+        self.monitor_events_sender
+            .send(MonitorEvent::new(
+                self.id,
+                SystemTime::now(),
+                Source::Worker(self.id),
+                EventPayload::TaskFailed {
+                    task_id: self.task,
+                    worker_id: self.id,
+                    reason: "Timeout".to_string(),
+                },
+            ))
+            .unwrap();
+
+        self.tasks_events_sender
+            .send(TaskEvent::new(self.id, self.task, TaskTimeout {}))
             .unwrap();
 
         return 42;
