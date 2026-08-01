@@ -1,7 +1,7 @@
 use rcompute::components::event::MonitorEvent;
-use rcompute::components::event::TaskEvent;
 use rcompute::components::monitor::Monitor;
 use rcompute::components::orchestrator::Orchestrator;
+use rcompute::components::task::TaskEvent;
 use rcompute::components::worker::Worker;
 use rcompute::config::app_config::AppConfig;
 

@@ -1,8 +1,8 @@
 #[cfg(test)]
 mod simple_orchestrator_test {
     use rcompute::components::event::MonitorEvent;
-    use rcompute::components::event::TaskEvent;
     use rcompute::components::orchestrator::Orchestrator;
+    use rcompute::components::task::TaskEvent;
 
     use std::sync::mpsc;
 

@@ -1,8 +1,9 @@
 #[cfg(test)]
 mod simple_monitor_test {
-    use rcompute::components::event::{EventPayload, MonitorEvent, Source, TaskEvent};
+    use rcompute::components::event::{EventPayload, MonitorEvent, Source};
     use rcompute::components::monitor::Monitor;
     use rcompute::components::orchestrator::Orchestrator;
+    use rcompute::components::task::TaskEvent;
     use rcompute::components::worker::Worker;
 
     use std::sync::mpsc;
@@ -54,7 +55,7 @@ mod simple_monitor_test {
         assert_eq!(
             second.payload,
             EventPayload::TaskCompleted {
-                task_id: 42,
+                task_id: 1,
                 worker_id: 1
             }
         );
@@ -65,7 +66,7 @@ mod simple_monitor_test {
         assert_eq!(
             first.payload,
             EventPayload::TaskCompleted {
-                task_id: 42,
+                task_id: 1,
                 worker_id: 1
             }
         );

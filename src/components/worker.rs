@@ -50,10 +50,8 @@ impl Worker {
         self.tasks_events_sender
             .send(TaskEvent::new(
                 self.id,
-                TaskResult {
-                    id: self.task,
-                    result: 42,
-                },
+                self.task,
+                TaskResult { result: 42 },
             ))
             .unwrap();
 
