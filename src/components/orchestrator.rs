@@ -1,4 +1,5 @@
 use crate::components::event::{EventPayload, MonitorEvent, Source};
+use crate::components::task::Task;
 use crate::components::task::{
     Task::{TaskInput, TaskResult, TaskTimeout},
     TaskEvent,
@@ -71,20 +72,12 @@ impl Orchestrator {
         loop {
             while let Ok(event) = self.task_events_receiver.try_recv() {
                 match event.task {
-                    TaskResult { result } => {
-                        println!(
-                            "{}Task result for {}: {}",
-                            ORCHESTRATOR, event.task_id, result
-                        );
-                        self.handle_task_result(event.task_id, event.worker_id, result);
-                    }
-                    TaskTimeout {} => self.handle_timeout(event.task_id, event.worker_id),
-                    _ => {
-                        println!(
-                            "{}Unexpected task event for {} from worker {}",
-                            ORCHESTRATOR, event.task_id, event.worker_id
-                        );
-                    }
+                    TaskResult { result: _ } => self.handle_task_result(event),
+                    TaskTimeout {} => self.handle_timeout(event),
+                    _ => println!(
+                        "{}Unexpected task event for {} from worker {}",
+                        ORCHESTRATOR, event.task_id, event.worker_id
+                    ),
                 }
             }
 
@@ -153,15 +146,33 @@ impl Orchestrator {
                     "{} Deadline reached for task {}",
                     ORCHESTRATOR, expired.task_id
                 );
-                self.handle_timeout(expired.task_id, expired.worker_id);
+                self.handle_timeout(TaskEvent::new(
+                    expired.worker_id,
+                    expired.task_id,
+                    Task::TaskTimeout {},
+                ));
             } else {
                 break;
             }
         }
     }
 
-    pub fn handle_timeout(&mut self, task_id: u32, worker_id: u32) {
-        println!("{} Received timeout for id {} ", ORCHESTRATOR, task_id);
+    pub fn handle_timeout(&mut self, task_event: TaskEvent) {
+        match task_event.task {
+            TaskTimeout {} => {
+                println!(
+                    "{} Received timeout for task {} from worker {}",
+                    ORCHESTRATOR, task_event.task_id, task_event.worker_id
+                );
+            }
+            _ => {
+                println!(
+                    "{} Unexpected task event {} sent for timeout from worker {}",
+                    ORCHESTRATOR, task_event.task_id, task_event.worker_id
+                );
+                return;
+            }
+        }
 
         self.monitor_events_sender
             .send(MonitorEvent::new(
@@ -169,18 +180,18 @@ impl Orchestrator {
                 SystemTime::now(),
                 Source::Orchestrator,
                 EventPayload::TaskFailed {
-                    task_id: task_id,
-                    worker_id: worker_id,
+                    task_id: task_event.task_id,
+                    worker_id: task_event.worker_id,
                     reason: "Timeout".to_string(),
                 },
             ))
             .unwrap();
 
-        match self.busy_workers.remove(&worker_id) {
+        match self.busy_workers.remove(&task_event.worker_id) {
             true => {
                 println!(
                     "{} Timeout for worker {} while it is still busy, removing from busy list",
-                    ORCHESTRATOR, worker_id
+                    ORCHESTRATOR, task_event.worker_id
                 );
 
                 //TODO: keep a trace of already failed task, cancel calculation?
@@ -189,11 +200,22 @@ impl Orchestrator {
         };
     }
 
-    pub fn handle_task_result(&self, task_id: u32, worker_id: u32, result: u32) {
-        println!(
-            "{} Received result with id {} and content {}",
-            ORCHESTRATOR, task_id, result
-        );
+    pub fn handle_task_result(&self, task_event: TaskEvent) {
+        match task_event.task {
+            TaskResult { result } => {
+                println!(
+                    "{} Received result for task {} from worker {} and result {}",
+                    ORCHESTRATOR, task_event.task_id, task_event.worker_id, result
+                );
+            }
+            _ => {
+                println!(
+                    "{} Unexpected task event {} sent as result from worker {}",
+                    ORCHESTRATOR, task_event.task_id, task_event.worker_id
+                );
+                return;
+            }
+        }
 
         self.monitor_events_sender
             .send(MonitorEvent::new(
@@ -201,18 +223,33 @@ impl Orchestrator {
                 SystemTime::now(),
                 Source::Orchestrator,
                 EventPayload::TaskCompleted {
-                    task_id: task_id,
-                    worker_id: worker_id,
+                    task_id: task_event.task_id,
+                    worker_id: task_event.worker_id,
                 },
             ))
             .unwrap();
     }
 
-    pub fn handle_task_creation(&self, task_id: u32, worker_id: u32, input: u32) {
-        // TODO: handle task creation, from orders to workers
+    // TODO: handle task creation, from orders to workers
+    pub fn handle_task_creation(&self, task_event: TaskEvent) {
+        match task_event.task {
+            TaskInput { input } => {
+                println!(
+                    "{} Received input for task {} from worker {} and input {}",
+                    ORCHESTRATOR, task_event.task_id, task_event.worker_id, input
+                );
+            }
+            _ => {
+                println!(
+                    "{} Unexpected task event {} sent as input for worker {}",
+                    ORCHESTRATOR, task_event.task_id, task_event.worker_id
+                );
+                return;
+            }
+        }
         println!(
-            "{} Created task with id {} and input {} for worker {}",
-            ORCHESTRATOR, task_id, input, worker_id
+            "{} Created task with id {} for worker {}",
+            ORCHESTRATOR, task_event.task_id, task_event.worker_id
         );
 
         self.monitor_events_sender
@@ -221,8 +258,8 @@ impl Orchestrator {
                 SystemTime::now(),
                 Source::Orchestrator,
                 EventPayload::TaskStarted {
-                    task_id: task_id,
-                    worker_id: worker_id,
+                    task_id: task_event.task_id,
+                    worker_id: task_event.worker_id,
                 },
             ))
             .unwrap();
