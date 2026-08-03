@@ -22,6 +22,7 @@ pub struct Orchestrator {
     pub empty: bool,
     pub available_workers: VecDeque<u32>,
     pub busy_workers: HashSet<u32>,
+    pub open_tasks: HashSet<u32>,
     pub timeout: u64,
     pub check_frequency: u64,
     pub deadlines: BinaryHeap<Deadline>,
@@ -49,6 +50,7 @@ impl Orchestrator {
             empty: true,
             available_workers: VecDeque::with_capacity(initial_capacity),
             busy_workers: HashSet::new(),
+            open_tasks: HashSet::new(),
             timeout: timeout,
             check_frequency: check_frequency,
             deadlines: BinaryHeap::new(),
@@ -74,6 +76,7 @@ impl Orchestrator {
                 match event.task {
                     TaskResult { result: _ } => self.handle_task_result(event),
                     TaskTimeout {} => self.handle_timeout(event),
+                    TaskInput { input: _ } => self.handle_task_input(event),
                     _ => println!(
                         "{}Unexpected task event for {} from worker {}",
                         ORCHESTRATOR, event.task_id, event.worker_id
@@ -200,6 +203,36 @@ impl Orchestrator {
         };
     }
 
+    pub fn handle_task_input(&self, task_event: TaskEvent) {
+        match task_event.task {
+            TaskInput { input } => {
+                println!(
+                    "{} Received input for task {} from worker {} and input {}",
+                    ORCHESTRATOR, task_event.task_id, task_event.worker_id, input
+                );
+            }
+            _ => {
+                println!(
+                    "{} Unexpected task event {} sent as input for worker {}",
+                    ORCHESTRATOR, task_event.task_id, task_event.worker_id
+                );
+                return;
+            }
+        }
+
+        if self.open_tasks.contains(&task_event.task_id) {
+            println!(
+                "{} Task {} already exists in open tasks, ignoring input from worker {}",
+                ORCHESTRATOR, task_event.task_id, task_event.worker_id
+            );
+
+            // TODO: send a message to the monitor that the task was ignored due to duplication
+
+            self.handle_task_creation(task_event);
+            return;
+        }
+    }
+
     pub fn handle_task_result(&self, task_event: TaskEvent) {
         match task_event.task {
             TaskResult { result } => {
@@ -247,6 +280,7 @@ impl Orchestrator {
                 return;
             }
         }
+
         println!(
             "{} Created task with id {} for worker {}",
             ORCHESTRATOR, task_event.task_id, task_event.worker_id
