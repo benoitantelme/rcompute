@@ -10,7 +10,7 @@ mod simple_monitor_test {
     use std::{thread, time};
 
     #[test]
-    fn initialisation() {
+    fn initialisation_test() {
         let (monitor_tx, monitor_rx) = mpsc::channel::<MonitorEvent>();
         let (task_tx, task_rx) = mpsc::channel::<TaskEvent>();
 

@@ -1,6 +1,7 @@
 use crate::components::event::EventPayload;
 use crate::components::event::MonitorEvent;
 use crate::components::event::Source;
+use crate::components::task::Task::TaskInput;
 use crate::components::task::Task::TaskResult;
 use crate::components::task::Task::TaskTimeout;
 use crate::components::task::TaskEvent;
@@ -80,6 +81,31 @@ impl Worker {
             .unwrap();
 
         return 42;
+    }
+
+    pub fn send_task(&self, task_id: u32, input: u32) -> u32 {
+        println!(
+            "{} id {} sending task  {} input {}",
+            WORKER, self.id, task_id, input
+        );
+
+        self.monitor_events_sender
+            .send(MonitorEvent::new(
+                self.id,
+                SystemTime::now(),
+                Source::Worker(self.id),
+                EventPayload::TaskOrdered {
+                    task_id: self.task,
+                    worker_id: self.id,
+                },
+            ))
+            .unwrap();
+
+        self.tasks_events_sender
+            .send(TaskEvent::new(self.id, self.task, TaskInput { input: 41 }))
+            .unwrap();
+
+        return 41;
     }
 }
 

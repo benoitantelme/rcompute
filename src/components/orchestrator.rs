@@ -77,10 +77,6 @@ impl Orchestrator {
                     TaskResult { result: _ } => self.handle_task_result(event),
                     TaskTimeout {} => self.handle_timeout(event),
                     TaskInput { input: _ } => self.handle_task_input(event),
-                    _ => println!(
-                        "{}Unexpected task event for {} from worker {}",
-                        ORCHESTRATOR, event.task_id, event.worker_id
-                    ),
                 }
             }
 
@@ -226,7 +222,17 @@ impl Orchestrator {
                 ORCHESTRATOR, task_event.task_id, task_event.worker_id
             );
 
-            // TODO: send a message to the monitor that the task was ignored due to duplication
+            self.monitor_events_sender
+                .send(MonitorEvent::new(
+                    self.id,
+                    SystemTime::now(),
+                    Source::Orchestrator,
+                    EventPayload::TaskDuplicated {
+                        task_id: task_event.task_id,
+                        worker_id: task_event.worker_id,
+                    },
+                ))
+                .unwrap();
 
             self.handle_task_creation(task_event);
             return;
