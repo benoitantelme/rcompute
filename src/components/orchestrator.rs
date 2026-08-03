@@ -22,6 +22,9 @@ pub struct Orchestrator {
     pub empty: bool,
     pub available_workers: VecDeque<u32>,
     pub busy_workers: HashSet<u32>,
+    pub open_tasks: HashSet<u32>,
+    pub closed_tasks: HashSet<u32>,
+    pub failed_tasks: HashSet<u32>,
     pub timeout: u64,
     pub check_frequency: u64,
     pub deadlines: BinaryHeap<Deadline>,
@@ -49,6 +52,9 @@ impl Orchestrator {
             empty: true,
             available_workers: VecDeque::with_capacity(initial_capacity),
             busy_workers: HashSet::new(),
+            open_tasks: HashSet::new(),
+            closed_tasks: HashSet::new(),
+            failed_tasks: HashSet::new(),
             timeout: timeout,
             check_frequency: check_frequency,
             deadlines: BinaryHeap::new(),
@@ -74,10 +80,7 @@ impl Orchestrator {
                 match event.task {
                     TaskResult { result: _ } => self.handle_task_result(event),
                     TaskTimeout {} => self.handle_timeout(event),
-                    _ => println!(
-                        "{}Unexpected task event for {} from worker {}",
-                        ORCHESTRATOR, event.task_id, event.worker_id
-                    ),
+                    TaskInput { input: _ } => self.handle_task_input(event),
                 }
             }
 
@@ -187,20 +190,62 @@ impl Orchestrator {
             ))
             .unwrap();
 
+        // TODO: need to manage retry later?
+        self.open_tasks.remove(&task_event.task_id);
+        self.failed_tasks.insert(task_event.task_id);
+
         match self.busy_workers.remove(&task_event.worker_id) {
             true => {
                 println!(
                     "{} Timeout for worker {} while it is still busy, removing from busy list",
                     ORCHESTRATOR, task_event.worker_id
                 );
-
-                //TODO: keep a trace of already failed task, cancel calculation?
             }
             _ => {}
         };
     }
 
-    pub fn handle_task_result(&self, task_event: TaskEvent) {
+    pub fn handle_task_input(&mut self, task_event: TaskEvent) {
+        match task_event.task {
+            TaskInput { input } => {
+                println!(
+                    "{} Received input for task {} from worker {} and input {}",
+                    ORCHESTRATOR, task_event.task_id, task_event.worker_id, input
+                );
+            }
+            _ => {
+                println!(
+                    "{} Unexpected task event {} sent as input for worker {}",
+                    ORCHESTRATOR, task_event.task_id, task_event.worker_id
+                );
+                return;
+            }
+        }
+
+        if self.open_tasks.contains(&task_event.task_id) {
+            println!(
+                "{} Task {} already exists in open tasks, ignoring input from worker {}",
+                ORCHESTRATOR, task_event.task_id, task_event.worker_id
+            );
+
+            self.monitor_events_sender
+                .send(MonitorEvent::new(
+                    self.id,
+                    SystemTime::now(),
+                    Source::Orchestrator,
+                    EventPayload::TaskDuplicated {
+                        task_id: task_event.task_id,
+                        worker_id: task_event.worker_id,
+                    },
+                ))
+                .unwrap();
+            return;
+        } else {
+            self.handle_task_creation(task_event);
+        }
+    }
+
+    pub fn handle_task_result(&mut self, task_event: TaskEvent) {
         match task_event.task {
             TaskResult { result } => {
                 println!(
@@ -217,6 +262,9 @@ impl Orchestrator {
             }
         }
 
+        self.open_tasks.remove(&task_event.task_id);
+        self.closed_tasks.insert(task_event.task_id);
+
         self.monitor_events_sender
             .send(MonitorEvent::new(
                 self.id,
@@ -230,8 +278,7 @@ impl Orchestrator {
             .unwrap();
     }
 
-    // TODO: handle task creation, from orders to workers
-    pub fn handle_task_creation(&self, task_event: TaskEvent) {
+    pub fn handle_task_creation(&mut self, task_event: TaskEvent) {
         match task_event.task {
             TaskInput { input } => {
                 println!(
@@ -247,10 +294,13 @@ impl Orchestrator {
                 return;
             }
         }
+
         println!(
             "{} Created task with id {} for worker {}",
             ORCHESTRATOR, task_event.task_id, task_event.worker_id
         );
+
+        self.open_tasks.insert(task_event.task_id);
 
         self.monitor_events_sender
             .send(MonitorEvent::new(

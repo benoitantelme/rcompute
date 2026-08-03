@@ -45,4 +45,12 @@ pub enum EventPayload {
         worker_id: u32,
         reason: String,
     },
+    TaskDuplicated {
+        task_id: u32,
+        worker_id: u32,
+    },
+    TaskOrdered {
+        task_id: u32,
+        worker_id: u32,
+    },
 }
