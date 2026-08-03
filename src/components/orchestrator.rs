@@ -24,6 +24,7 @@ pub struct Orchestrator {
     pub busy_workers: HashSet<u32>,
     pub open_tasks: HashSet<u32>,
     pub closed_tasks: HashSet<u32>,
+    pub failed_tasks: HashSet<u32>,
     pub timeout: u64,
     pub check_frequency: u64,
     pub deadlines: BinaryHeap<Deadline>,
@@ -53,6 +54,7 @@ impl Orchestrator {
             busy_workers: HashSet::new(),
             open_tasks: HashSet::new(),
             closed_tasks: HashSet::new(),
+            failed_tasks: HashSet::new(),
             timeout: timeout,
             check_frequency: check_frequency,
             deadlines: BinaryHeap::new(),
@@ -188,14 +190,16 @@ impl Orchestrator {
             ))
             .unwrap();
 
+        // TODO: need to manage retry later?
+        self.open_tasks.remove(&task_event.task_id);
+        self.failed_tasks.insert(task_event.task_id);
+
         match self.busy_workers.remove(&task_event.worker_id) {
             true => {
                 println!(
                     "{} Timeout for worker {} while it is still busy, removing from busy list",
                     ORCHESTRATOR, task_event.worker_id
                 );
-
-                //TODO: keep a trace of already failed task, cancel calculation?
             }
             _ => {}
         };
