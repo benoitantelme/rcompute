@@ -23,6 +23,7 @@ pub struct Orchestrator {
     pub available_workers: VecDeque<u32>,
     pub busy_workers: HashSet<u32>,
     pub open_tasks: HashSet<u32>,
+    pub closed_tasks: HashSet<u32>,
     pub timeout: u64,
     pub check_frequency: u64,
     pub deadlines: BinaryHeap<Deadline>,
@@ -51,6 +52,7 @@ impl Orchestrator {
             available_workers: VecDeque::with_capacity(initial_capacity),
             busy_workers: HashSet::new(),
             open_tasks: HashSet::new(),
+            closed_tasks: HashSet::new(),
             timeout: timeout,
             check_frequency: check_frequency,
             deadlines: BinaryHeap::new(),
@@ -235,12 +237,11 @@ impl Orchestrator {
                 .unwrap();
             return;
         } else {
-            self.open_tasks.insert(task_event.task_id);
             self.handle_task_creation(task_event);
         }
     }
 
-    pub fn handle_task_result(&self, task_event: TaskEvent) {
+    pub fn handle_task_result(&mut self, task_event: TaskEvent) {
         match task_event.task {
             TaskResult { result } => {
                 println!(
@@ -257,6 +258,9 @@ impl Orchestrator {
             }
         }
 
+        self.open_tasks.remove(&task_event.task_id);
+        self.closed_tasks.insert(task_event.task_id);
+
         self.monitor_events_sender
             .send(MonitorEvent::new(
                 self.id,
@@ -270,8 +274,7 @@ impl Orchestrator {
             .unwrap();
     }
 
-    // TODO: handle task creation, from orders to workers
-    pub fn handle_task_creation(&self, task_event: TaskEvent) {
+    pub fn handle_task_creation(&mut self, task_event: TaskEvent) {
         match task_event.task {
             TaskInput { input } => {
                 println!(
@@ -292,6 +295,8 @@ impl Orchestrator {
             "{} Created task with id {} for worker {}",
             ORCHESTRATOR, task_event.task_id, task_event.worker_id
         );
+
+        self.open_tasks.insert(task_event.task_id);
 
         self.monitor_events_sender
             .send(MonitorEvent::new(
