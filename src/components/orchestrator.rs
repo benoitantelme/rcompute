@@ -199,7 +199,7 @@ impl Orchestrator {
         };
     }
 
-    pub fn handle_task_input(&self, task_event: TaskEvent) {
+    pub fn handle_task_input(&mut self, task_event: TaskEvent) {
         match task_event.task {
             TaskInput { input } => {
                 println!(
@@ -233,9 +233,10 @@ impl Orchestrator {
                     },
                 ))
                 .unwrap();
-
-            self.handle_task_creation(task_event);
             return;
+        } else {
+            self.open_tasks.insert(task_event.task_id);
+            self.handle_task_creation(task_event);
         }
     }
 
