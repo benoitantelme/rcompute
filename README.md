@@ -4,7 +4,7 @@ Distributed computing in rust
 
 ## Project Roadmap
 
-- [ ] **Phase One**: Initial setup
+- [x] **Phase One**: Initial setup
   - [x] **1** — Rust, Cargo and CI setup
   - [x] **2** — Minimal orchestrator and workers
   - [x] **3** — Orchestrator and worker setup: configuration, availability, threshold, ...
@@ -12,10 +12,9 @@ Distributed computing in rust
   - [x] **5** — Refactoring as an actors like system for orchestrator and workers (TBC)
   - [x] **6** — Observability: as feature and for proper testing as well
   - [x] **7** — Timeouts and deadlines
-  - [ ] **8** — Task management and lifecycle
-  - [ ] **9** — ......
+  - [x] **8** — Task management and lifecycle
 
-- [ ] **Phase Two**: Enrichment
+- [x] **Phase Two**: Enrichment
   - [ ] **1** — Adding more tests
   - [ ] **2** — Better configuration and code/apis
   - [ ] **3** — ......
