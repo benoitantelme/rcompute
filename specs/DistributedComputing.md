@@ -100,7 +100,7 @@ Responsibilities:
 
 1. The worker returns an execution error.
 2. The orchestrator marks the assignment as failed.
-3. The task is reassigned to another free worker.
+3. The task is reassigned to another free worker?
 
 ### Timeout
 

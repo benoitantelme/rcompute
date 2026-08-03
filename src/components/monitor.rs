@@ -37,6 +37,12 @@ impl Monitor {
                     EventPayload::TaskCompleted { task_id, worker_id } => {
                         println!("{}Task completed {} by {}", MONITOR, task_id, worker_id);
                     }
+                    EventPayload::TaskDuplicated { task_id, worker_id } => {
+                        println!("{}Task duplicated {} by {}", MONITOR, task_id, worker_id);
+                    }
+                    EventPayload::TaskOrdered { task_id, worker_id } => {
+                        println!("{}Task ordered {} by {}", MONITOR, task_id, worker_id);
+                    }
                     EventPayload::TaskFailed {
                         task_id,
                         worker_id,
