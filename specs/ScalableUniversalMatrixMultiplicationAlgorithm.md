@@ -281,3 +281,7 @@ For each iteration:
 4. Repeat for all k.
 
 Because each processor owns and updates its own result block throughout the computation, the final matrix is already assembled when the last iteration completes.
+
+## Improvements on SUMMA
+
+https://sites.cs.ucsb.edu/~gilbert/cs140/old/cs140Win2009/assignments/hw3.pdf

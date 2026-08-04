@@ -20,7 +20,7 @@ Distributed computing in rust
   - [ ] **3** — ......
 
 - [ ] **Phase Three**: Matrix Multiplication
-  - [ ] **1** — Specification, algorithm, ''map reduce'', ...
+  - [x] **1** — Specification, algorithm, ''map reduce'', ...
   - [ ] **2** — Introducing calculations, different sub tasks, sub results, ...
   - [ ] **3** — Calculation lifecycle
   - [ ] **4** — Calculation failure management
@@ -39,4 +39,6 @@ cargo run
 
 ## More details
 
-[Main specification](specs/DistributedComputing.md)
+- [Main specification](specs/DistributedComputing.md)
+- [Matrix Multiplication Basics](specs/MatrixMultiplicationBasics.md)
+- [Scalable Universal Matrix Multiplication Algorithm](specs/ScalableUniversalMatrixMultiplicationAlgorithm.md)
