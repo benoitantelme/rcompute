@@ -18,9 +18,8 @@ mod simple_components_test {
         assert_eq!(orchestrator.check_frequency, 30);
 
         let (monitor_tx, _monitor_rx) = mpsc::channel::<MonitorEvent>();
-        let worker = Worker::new(1, 1, task_tx.clone(), monitor_tx.clone());
+        let worker = Worker::new(1, task_tx.clone(), monitor_tx.clone());
         assert_eq!(worker.id, 1);
-        assert_eq!(worker.task, 1);
     }
 
     #[test]
