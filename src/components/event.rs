@@ -1,3 +1,4 @@
+use std::fmt;
 use std::time::SystemTime;
 
 // Observability related events between orchestrator/workers and monitor
@@ -20,10 +21,25 @@ impl MonitorEvent {
     }
 }
 
+impl fmt::Display for MonitorEvent {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Event {} with source {} ", self.id, self.source)
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum Source {
     Orchestrator,
     Worker(u32),
+}
+
+impl fmt::Display for Source {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Source::Orchestrator => write!(f, "Orchestrator"),
+            Source::Worker(id) => write!(f, "Worker {}", id),
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
