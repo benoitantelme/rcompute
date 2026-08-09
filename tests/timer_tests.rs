@@ -51,7 +51,8 @@ mod timer_test {
         let (task_tx, task_rx) = mpsc::channel::<TaskEvent>();
 
         let monitor = Monitor::new(1, monitor_rx);
-        let history_clone = monitor.events.clone();
+        let orchestrator_history_clone = monitor.orchestrator_events.clone();
+        let workers_history_clone = monitor.workers_events.clone();
         std::thread::spawn(move || monitor.run());
 
         // no initial capacity and long timeout to avoid orchestrator deadline timeout to kick in before the worker timeout
@@ -59,17 +60,19 @@ mod timer_test {
         orchestrator.initialise();
         std::thread::spawn(move || orchestrator.run());
 
-        let worker = Worker::new(1, 1, task_tx.clone(), monitor_tx.clone());
+        let worker = Worker::new(1, task_tx.clone(), monitor_tx.clone());
         println!("{}", worker.to_string());
-        worker.timeout();
+        worker.timeout(1);
 
         thread::sleep(time::Duration::from_millis(100));
-        let mut history = history_clone.read().unwrap().clone();
-        assert_eq!(history.len(), 2);
+        let mut orchestrator_history = orchestrator_history_clone.read().unwrap().clone();
+        let mut workers_history = workers_history_clone.read().unwrap().clone();
+        assert_eq!(orchestrator_history.len(), 1);
+        assert_eq!(workers_history.len(), 1);
 
         // orchestrator timeout message after of the history
 
-        let first = history.pop().unwrap();
+        let first = orchestrator_history.pop().unwrap();
         assert_eq!(first.id, 1);
         assert_eq!(first.source, Source::Orchestrator);
         assert_eq!(
@@ -82,7 +85,7 @@ mod timer_test {
         );
 
         // worker timeouts message at the beginning of the history
-        let second = history.pop().unwrap();
+        let second = workers_history.pop().unwrap();
         assert_eq!(second.id, 1);
         assert_eq!(second.source, Source::Worker(1));
         assert_eq!(

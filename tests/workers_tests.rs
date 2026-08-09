@@ -11,9 +11,9 @@ mod worker_test {
     fn test_workers() {
         let (task_tx, task_rx) = mpsc::channel::<TaskEvent>();
         let (monitor_tx, _monitor_rx) = mpsc::channel::<MonitorEvent>();
-        let worker = Worker::new(1, 1, task_tx.clone(), monitor_tx.clone());
+        let worker = Worker::new(1, task_tx.clone(), monitor_tx.clone());
         println!("{}", worker.to_string());
-        worker.calculate();
+        worker.calculate(1);
         std::thread::sleep(Duration::from_millis(10));
 
         let event = task_rx.recv().unwrap();

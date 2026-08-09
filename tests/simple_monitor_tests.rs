@@ -16,7 +16,8 @@ mod simple_monitor_test {
 
         let monitor = Monitor::new(1, monitor_rx);
         // Clone only the shared history
-        let history_clone = monitor.events.clone();
+        let orchestrator_history_clone = monitor.orchestrator_events.clone();
+        let workers_history_clone = monitor.workers_events.clone();
         std::thread::spawn(move || monitor.run());
 
         let mut orchestrator = Orchestrator::new(1, monitor_tx.clone(), task_rx, 5, 3, 30, 30);
@@ -25,13 +26,13 @@ mod simple_monitor_test {
 
         std::thread::spawn(move || orchestrator.run());
 
-        let worker = Worker::new(1, 1, task_tx.clone(), monitor_tx.clone());
+        let worker = Worker::new(1, task_tx.clone(), monitor_tx.clone());
         println!("{}", worker.to_string());
-        worker.calculate();
+        worker.calculate(1);
 
         thread::sleep(time::Duration::from_millis(100));
-        let mut history = history_clone.read().unwrap().clone();
-        assert_eq!(history.len(), 7);
+        let mut history = orchestrator_history_clone.read().unwrap().clone();
+        assert_eq!(history.len(), 6);
 
         // orchestrator timeouts message at the end for the 5th timed out workers
         for n in 1..6 {
@@ -49,18 +50,21 @@ mod simple_monitor_test {
         }
 
         // then calculated messages in reverse order
-        let second = history.pop().unwrap();
-        assert_eq!(second.id, 1);
-        assert_eq!(second.source, Source::Orchestrator);
+        let first = history.pop().unwrap();
+        assert_eq!(first.id, 1);
+        assert_eq!(first.source, Source::Orchestrator);
         assert_eq!(
-            second.payload,
+            first.payload,
             EventPayload::TaskCompleted {
                 task_id: 1,
                 worker_id: 1
             }
         );
 
-        let first = history.pop().unwrap();
+        let mut workers_history = workers_history_clone.read().unwrap().clone();
+        assert_eq!(workers_history.len(), 1);
+
+        let first = workers_history.pop().unwrap();
         assert_eq!(first.id, 1);
         assert_eq!(first.source, Source::Worker(1));
         assert_eq!(
@@ -79,7 +83,8 @@ mod simple_monitor_test {
 
         let monitor = Monitor::new(1, monitor_rx);
         // Clone only the shared history
-        let history_clone = monitor.events.clone();
+        let orchestrator_history_clone = monitor.orchestrator_events.clone();
+        let workers_history_clone = monitor.workers_events.clone();
         std::thread::spawn(move || monitor.run());
 
         let mut orchestrator = Orchestrator::new(1, monitor_tx.clone(), task_rx, 0, 3, 30, 30);
@@ -88,14 +93,14 @@ mod simple_monitor_test {
 
         std::thread::spawn(move || orchestrator.run());
 
-        let worker = Worker::new(1, 1, task_tx.clone(), monitor_tx.clone());
+        let worker = Worker::new(1, task_tx.clone(), monitor_tx.clone());
         println!("{}", worker.to_string());
         worker.send_task(1, 41);
         worker.send_task(1, 41);
 
         thread::sleep(time::Duration::from_millis(100));
-        let mut history = history_clone.read().unwrap().clone();
-        assert_eq!(history.len(), 4);
+        let mut history = orchestrator_history_clone.read().unwrap().clone();
+        assert_eq!(history.len(), 2);
 
         // Last message is the orchestrator's response to the duplicate task
         let last = history.pop().unwrap();
@@ -120,9 +125,10 @@ mod simple_monitor_test {
             }
         );
 
+        let mut workers_history = workers_history_clone.read().unwrap().clone();
         // orchestrator timeouts message at the end for the 5th timed out workers
         for _n in 1..3 {
-            let failed = history.pop().unwrap();
+            let failed = workers_history.pop().unwrap();
             assert_eq!(failed.id, 1);
             assert_eq!(failed.source, Source::Worker(1));
             assert_eq!(
