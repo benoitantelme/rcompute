@@ -15,9 +15,10 @@ Distributed computing in rust
   - [x] **8** — Task management and lifecycle
 
 - [x] **Phase Two**: Enrichment
-  - [ ] **1** — Adding more tests
+  - [x] **1** — Adding more tests
+  - [x] **2** — Additional specifications and algorithm
   - [ ] **2** — Better configuration and code/apis
-  - [ ] **3** — ......
+  - [ ] **4** — ......
 
 - [ ] **Phase Three**: Matrix Multiplication
   - [x] **1** — Specification, algorithm, ''map reduce'', ...
@@ -42,3 +43,5 @@ cargo run
 - [Main specification](specs/DistributedComputing.md)
 - [Matrix Multiplication Basics](specs/MatrixMultiplicationBasics.md)
 - [Scalable Universal Matrix Multiplication Algorithm](specs/ScalableUniversalMatrixMultiplicationAlgorithm.md)
+- [SUMMA Summary](specs/SummaSummary.md)
+- [SUMMA Algorithm](specs/SummaAlgo.md)
