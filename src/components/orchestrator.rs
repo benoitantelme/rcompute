@@ -1,5 +1,6 @@
 use crate::components::event::{EventPayload, MonitorEvent, Source};
 use crate::components::task::Task;
+use crate::config::app_config::AppConfig;
 use crate::components::task::{
     Task::{TaskInput, TaskResult, TaskTimeout},
     TaskEvent,
@@ -57,6 +58,32 @@ impl Orchestrator {
             failed_tasks: HashSet::new(),
             timeout: timeout,
             check_frequency: check_frequency,
+            deadlines: BinaryHeap::new(),
+        }
+    }
+
+
+        pub fn from_config(
+        id: u32,
+        monitor_events_sender: mpsc::Sender<MonitorEvent>,
+        task_events_receiver: mpsc::Receiver<TaskEvent>,
+        config: AppConfig,
+    ) -> Self {
+        Self {
+            id: id,
+            monitor_events_sender: monitor_events_sender,
+            task_events_receiver: task_events_receiver,
+            threshold: config.workers_threshold,
+            initial_capacity: config.workers_number,
+            low_capacity: true,
+            empty: true,
+            available_workers: VecDeque::with_capacity(config.workers_number),
+            busy_workers: HashSet::new(),
+            open_tasks: HashSet::new(),
+            closed_tasks: HashSet::new(),
+            failed_tasks: HashSet::new(),
+            timeout: config.timeout,
+            check_frequency: config.check_frequency,
             deadlines: BinaryHeap::new(),
         }
     }
