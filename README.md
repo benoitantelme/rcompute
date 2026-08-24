@@ -17,8 +17,7 @@ Distributed computing in rust
 - [x] **Phase Two**: Enrichment
   - [x] **1** — Adding more tests
   - [x] **2** — Additional specifications and algorithm
-  - [ ] **2** — Better configuration and code/apis
-  - [ ] **4** — ......
+  - [x] **3** — Better configuration and code/apis
 
 - [ ] **Phase Three**: Matrix Multiplication
   - [x] **1** — Specification, algorithm, ''map reduce'', ...
