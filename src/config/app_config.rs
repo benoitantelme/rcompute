@@ -4,7 +4,7 @@ use figment::{
 };
 use serde::Deserialize;
 
-#[derive(Debug, PartialEq, Deserialize)]
+#[derive(Default, Debug, PartialEq, Deserialize)]
 pub struct AppConfig {
     pub workers_number: usize,
     pub workers_threshold: u32,
@@ -14,6 +14,10 @@ pub struct AppConfig {
 
 impl AppConfig {
     pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn read_config() -> Self {
         let config_path = "src/conf/config.toml";
         let figment = Figment::from(Toml::file(config_path));
         let config: AppConfig = figment
@@ -26,5 +30,18 @@ impl AppConfig {
             timeout: config.timeout,
             check_frequency: config.check_frequency,
         }
+    }
+
+    pub fn set_config(
+        &mut self,
+        workers_number: usize,
+        workers_threshold: u32,
+        timeout: u64,
+        check_frequency: u64,
+    ) {
+        self.workers_number = workers_number;
+        self.workers_threshold = workers_threshold;
+        self.timeout = timeout;
+        self.check_frequency = check_frequency;
     }
 }

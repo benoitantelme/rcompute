@@ -70,8 +70,7 @@ mod timer_test {
         assert_eq!(orchestrator_history.len(), 1);
         assert_eq!(workers_history.len(), 1);
 
-        // orchestrator timeout message after of the history
-
+        // orchestrator timeout message  
         let first = orchestrator_history.pop().unwrap();
         assert_eq!(first.id, 1);
         assert_eq!(first.source, Source::Orchestrator);
