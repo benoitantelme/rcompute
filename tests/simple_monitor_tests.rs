@@ -87,6 +87,7 @@ mod simple_monitor_test {
         let workers_history_clone = monitor.workers_events.clone();
         std::thread::spawn(move || monitor.run());
 
+        // no initial workers
         let mut orchestrator = Orchestrator::new(1, monitor_tx.clone(), task_rx, 0, 3, 30, 30);
 
         orchestrator.initialise();
