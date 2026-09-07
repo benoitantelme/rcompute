@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod calculator_test {
-    use rcompute::components::calculator::Calculator;
+    use rcompute::components::single_threaded_calculator::Calculator;
 
     #[test]
     fn instantiation() {
