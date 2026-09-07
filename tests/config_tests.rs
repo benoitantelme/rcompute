@@ -22,7 +22,7 @@ mod config_test {
         assert_eq!(config.check_frequency, 20 * 1000);
     }
 
-     #[test]
+    #[test]
     fn set_config() {
         let mut config: AppConfig = AppConfig::new();
 

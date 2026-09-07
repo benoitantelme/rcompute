@@ -1,11 +1,11 @@
 use crate::components::event::{EventPayload, MonitorEvent, Source};
 use crate::components::task::Task;
-use crate::config::app_config::AppConfig;
 use crate::components::task::{
     Task::{TaskInput, TaskResult, TaskTimeout},
     TaskEvent,
 };
 use crate::components::timer::Deadline;
+use crate::config::app_config::AppConfig;
 
 use std::collections::BinaryHeap;
 use std::collections::HashSet;
@@ -62,8 +62,7 @@ impl Orchestrator {
         }
     }
 
-
-        pub fn from_config(
+    pub fn from_config(
         id: u32,
         monitor_events_sender: mpsc::Sender<MonitorEvent>,
         task_events_receiver: mpsc::Receiver<TaskEvent>,

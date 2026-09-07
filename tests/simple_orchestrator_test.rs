@@ -2,7 +2,6 @@
 mod simple_orchestrator_test {
     use rcompute::components::event::MonitorEvent;
     use rcompute::components::orchestrator::Orchestrator;
-    use rcompute::components::task::Task::{TaskInput, TaskResult, TaskTimeout};
     use rcompute::components::task::TaskEvent;
 
     use std::sync::mpsc;
