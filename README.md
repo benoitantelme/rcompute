@@ -21,7 +21,7 @@ Distributed computing in rust
 
 - [ ] **Phase Three**: Matrix Multiplication
   - [x] **1** — Specification, algorithm, ''map reduce'', ...
-  - [ ] **2** — Single thread execution for unit tests setup
+  - [x] **2** — Single thread execution for unit tests setup
   - [ ] **3** — Introducing calculations, different sub tasks, sub results, ...
   - [ ] **4** — Calculation lifecycle
   - [ ] **5** — Calculation failure management
