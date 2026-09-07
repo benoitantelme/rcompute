@@ -18,5 +18,8 @@ mod calculator_test {
         );
 
         println!("{}", calc);
+        let c = calc.calculate();
+
+        assert_eq!(c, [[3, 3, 3], [3, 3, 3], [3, 3, 3]]);
     }
 }
