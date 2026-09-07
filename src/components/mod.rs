@@ -1,3 +1,4 @@
+pub mod calculator;
 pub mod event;
 pub mod monitor;
 pub mod orchestrator;
