@@ -79,19 +79,19 @@ mod simple_orchestrator_test {
         assert_eq!(orchestrator.open_tasks.len(), 0);
         assert_eq!(orchestrator.failed_tasks.len(), 0);
 
-        orchestrator.handle_task_input(1, 1, 41);
+        orchestrator.open_tasks.insert(1);
 
         assert_eq!(orchestrator.closed_tasks.len(), 0);
         assert_eq!(orchestrator.open_tasks.len(), 1);
         assert_eq!(orchestrator.failed_tasks.len(), 0);
 
-        orchestrator.handle_task_result(1, 1, 42);
+        orchestrator.handle_partial_result(1, 1, 42, 0);
 
         assert_eq!(orchestrator.closed_tasks.len(), 1);
         assert_eq!(orchestrator.open_tasks.len(), 0);
         assert_eq!(orchestrator.failed_tasks.len(), 0);
 
-        orchestrator.handle_task_input(1, 2, 41);
+        orchestrator.open_tasks.insert(1);
 
         assert_eq!(orchestrator.closed_tasks.len(), 1);
         assert_eq!(orchestrator.open_tasks.len(), 1);
