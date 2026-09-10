@@ -28,10 +28,12 @@ fn main() {
     println!("{}", orchestrator.to_string());
     orchestrator.initialise();
 
-    std::thread::spawn(move || orchestrator.run());
+    let (worker, work_sender) = Worker::with_work_channel(1, task_tx, monitor_tx.clone());
+    orchestrator.register_worker_channel(1, work_sender);
+    orchestrator.dispatch_multiply(1, 6, 7, 0).unwrap();
 
-    let worker = Worker::new(1, task_tx.clone(), monitor_tx.clone());
     println!("{}", worker.to_string());
-    worker.calculate(1);
+    std::thread::spawn(move || worker.run());
+    std::thread::spawn(move || orchestrator.run());
     std::thread::sleep(Duration::from_millis(50));
 }

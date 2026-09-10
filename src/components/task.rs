@@ -18,13 +18,7 @@ impl TaskEvent {
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Task {
-    TaskResult {
-        result: u32,
-    },
     TaskTimeout {},
-    TaskInput {
-        input: u32,
-    },
     /// A unit of multiplication work sent by an orchestrator to a worker.
     Multiply {
         a: u32,
