@@ -15,21 +15,12 @@ fn main() {
     std::thread::spawn(move || monitor.run());
 
     let config = AppConfig::read_config();
-    const SUMMA_GRID_WORKERS: usize = 3 * 3;
+    let matrix_size = config.matrix_size;
     let (task_tx, task_rx) = mpsc::channel::<TaskEvent>();
-    let mut orchestrator = Orchestrator::new(
-        1,
-        monitor_tx.clone(),
-        task_rx,
-        SUMMA_GRID_WORKERS,
-        config.workers_threshold,
-        config.timeout,
-        config.check_frequency,
-    );
+    let mut orchestrator = Orchestrator::from_config(1, monitor_tx.clone(), task_rx, config);
     println!("{}", orchestrator.to_string());
-    orchestrator.initialise();
 
-    for worker_id in 1..=SUMMA_GRID_WORKERS as u32 {
+    for worker_id in 1..=(matrix_size * matrix_size) as u32 {
         let (worker, work_sender) =
             Worker::with_work_channel(worker_id, task_tx.clone(), monitor_tx.clone());
         orchestrator.register_worker_channel(worker_id, work_sender);

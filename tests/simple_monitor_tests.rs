@@ -7,7 +7,7 @@ use std::sync::mpsc;
 use std::time::Duration;
 
 #[test]
-fn monitor_records_the_multiply_lifecycle() {
+fn monitor_records_orchestrator_and_worker_summa_events() {
     let (monitor_sender, monitor_receiver) = mpsc::channel::<MonitorEvent>();
     let (result_sender, result_receiver) = mpsc::channel::<TaskEvent>();
     let monitor = Monitor::new(1, monitor_receiver);
@@ -15,48 +15,57 @@ fn monitor_records_the_multiply_lifecycle() {
     let worker_events = monitor.workers_events.clone();
     std::thread::spawn(move || monitor.run());
 
-    let (worker, work_sender) = Worker::with_work_channel(1, result_sender, monitor_sender.clone());
-    let mut orchestrator = Orchestrator::new(1, monitor_sender, result_receiver, 1, 1, 1_000, 100);
-    orchestrator.initialise();
-    orchestrator.register_worker_channel(1, work_sender);
-    std::thread::spawn(move || worker.run());
-    orchestrator.dispatch_multiply(1, 6, 7, 0).unwrap();
-    std::thread::sleep(Duration::from_millis(10));
-    orchestrator.process_incoming_tasks();
-    std::thread::sleep(Duration::from_millis(10));
+    let mut orchestrator = Orchestrator::new(1, monitor_sender.clone(), result_receiver, 3);
+    for worker_id in 1..=9 {
+        let (worker, work_sender) =
+            Worker::with_work_channel(worker_id, result_sender.clone(), monitor_sender.clone());
+        orchestrator.register_worker_channel(worker_id, work_sender);
+        std::thread::spawn(move || worker.run());
+    }
+
+    orchestrator
+        .multiply_summa(
+            [[1, 2, 3], [4, 5, 6], [7, 8, 9]],
+            [[9, 8, 7], [6, 5, 4], [3, 2, 1]],
+        )
+        .unwrap();
+
+    std::thread::sleep(Duration::from_millis(20));
+    let orchestrator_events = orchestrator_events.read().unwrap();
+    assert_eq!(
+        orchestrator_events
+            .iter()
+            .filter(|event| {
+                event.source == Source::Orchestrator
+                    && matches!(event.payload, EventPayload::TaskAssigned { .. })
+            })
+            .count(),
+        27
+    );
+    assert_eq!(
+        orchestrator_events
+            .iter()
+            .filter(|event| {
+                event.source == Source::Orchestrator
+                    && matches!(event.payload, EventPayload::TaskCompleted { .. })
+            })
+            .count(),
+        27
+    );
 
     let worker_events = worker_events.read().unwrap();
-    assert!(worker_events.iter().any(|event| {
-        event.source == Source::Worker(1)
-            && event.payload
-                == EventPayload::TaskStarted {
-                    task_id: 1,
-                    worker_id: 1,
-                }
-    }));
-    assert!(worker_events.iter().any(|event| {
-        event.source == Source::Worker(1)
-            && event.payload
-                == EventPayload::TaskCompleted {
-                    task_id: 1,
-                    worker_id: 1,
-                }
-    }));
-    let orchestrator_events = orchestrator_events.read().unwrap();
-    assert!(orchestrator_events.iter().any(|event| {
-        event.source == Source::Orchestrator
-            && event.payload
-                == EventPayload::TaskAssigned {
-                    task_id: 1,
-                    worker_id: 1,
-                }
-    }));
-    assert!(orchestrator_events.iter().any(|event| {
-        event.source == Source::Orchestrator
-            && event.payload
-                == EventPayload::TaskCompleted {
-                    task_id: 1,
-                    worker_id: 1,
-                }
-    }));
+    assert_eq!(
+        worker_events
+            .iter()
+            .filter(|event| matches!(event.payload, EventPayload::TaskStarted { .. }))
+            .count(),
+        27
+    );
+    assert_eq!(
+        worker_events
+            .iter()
+            .filter(|event| matches!(event.payload, EventPayload::TaskCompleted { .. }))
+            .count(),
+        27
+    );
 }
