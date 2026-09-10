@@ -14,7 +14,7 @@ fn main() {
 
     std::thread::spawn(move || monitor.run());
 
-    let config: AppConfig = AppConfig::new();
+    let config = AppConfig::read_config();
     let (task_tx, task_rx) = mpsc::channel::<TaskEvent>();
     let mut orchestrator = Orchestrator::new(
         1,
