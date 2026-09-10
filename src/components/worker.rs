@@ -1,6 +1,8 @@
 use crate::components::event::EventPayload;
 use crate::components::event::MonitorEvent;
 use crate::components::event::Source;
+use crate::components::task::Task::Multiply;
+use crate::components::task::Task::PartialResult;
 use crate::components::task::Task::TaskInput;
 use crate::components::task::Task::TaskResult;
 use crate::components::task::Task::TaskTimeout;
@@ -16,6 +18,7 @@ pub struct Worker {
     pub id: u32,
     tasks_events_sender: mpsc::Sender<TaskEvent>,
     monitor_events_sender: mpsc::Sender<MonitorEvent>,
+    work_receiver: Option<mpsc::Receiver<TaskEvent>>,
 }
 
 impl Worker {
@@ -28,6 +31,66 @@ impl Worker {
             id: id,
             tasks_events_sender: t_sender,
             monitor_events_sender: m_sender,
+            work_receiver: None,
+        }
+    }
+
+    /// Creates a worker with its incoming work channel and returns the sender
+    /// that must be registered with the orchestrator.
+    pub fn with_work_channel(
+        id: u32,
+        result_sender: mpsc::Sender<TaskEvent>,
+        monitor_sender: mpsc::Sender<MonitorEvent>,
+    ) -> (Self, mpsc::Sender<TaskEvent>) {
+        let (work_sender, work_receiver) = mpsc::channel();
+        (
+            Self {
+                id,
+                tasks_events_sender: result_sender,
+                monitor_events_sender: monitor_sender,
+                work_receiver: Some(work_receiver),
+            },
+            work_sender,
+        )
+    }
+
+    /// Listens for work from the orchestrator until its work channel closes.
+    pub fn run(self) {
+        let Some(ref work_receiver) = self.work_receiver else {
+            return;
+        };
+
+        while let Ok(task_event) = work_receiver.recv() {
+            self.handle_task(task_event);
+        }
+    }
+
+    fn handle_task(&self, task_event: TaskEvent) {
+        match task_event.task {
+            Multiply { a, b, k } => {
+                let value = a * b;
+
+                self.monitor_events_sender
+                    .send(MonitorEvent::new(
+                        self.id,
+                        SystemTime::now(),
+                        Source::Worker(self.id),
+                        EventPayload::TaskCompleted {
+                            task_id: task_event.task_id,
+                            worker_id: self.id,
+                        },
+                    ))
+                    .unwrap();
+
+                self.tasks_events_sender
+                    .send(TaskEvent::new(
+                        self.id,
+                        task_event.task_id,
+                        PartialResult { value, k },
+                    ))
+                    .unwrap();
+            }
+            _ => {}
         }
     }
 

@@ -1,4 +1,5 @@
-// Task related events between workers and orchestrator
+// Task related events between workers and orchestrator.
+#[derive(Debug, PartialEq, Eq)]
 pub struct TaskEvent {
     pub worker_id: u32,
     pub task_id: u32,
@@ -15,8 +16,24 @@ impl TaskEvent {
     }
 }
 
+#[derive(Debug, PartialEq, Eq)]
 pub enum Task {
-    TaskResult { result: u32 },
+    TaskResult {
+        result: u32,
+    },
     TaskTimeout {},
-    TaskInput { input: u32 },
+    TaskInput {
+        input: u32,
+    },
+    /// A unit of multiplication work sent by an orchestrator to a worker.
+    Multiply {
+        a: u32,
+        b: u32,
+        k: usize,
+    },
+    /// A multiplication result sent by a worker back to its orchestrator.
+    PartialResult {
+        value: u32,
+        k: usize,
+    },
 }

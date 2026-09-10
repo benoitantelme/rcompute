@@ -1,13 +1,14 @@
 use crate::components::event::{EventPayload, MonitorEvent, Source};
 use crate::components::task::Task;
 use crate::components::task::{
-    Task::{TaskInput, TaskResult, TaskTimeout},
+    Task::{Multiply, PartialResult, TaskInput, TaskResult, TaskTimeout},
     TaskEvent,
 };
 use crate::components::timer::Deadline;
 use crate::config::app_config::AppConfig;
 
 use std::collections::BinaryHeap;
+use std::collections::HashMap;
 use std::collections::HashSet;
 use std::collections::VecDeque;
 use std::fmt;
@@ -29,6 +30,10 @@ pub struct Orchestrator {
     pub timeout: u64,
     pub check_frequency: u64,
     pub deadlines: BinaryHeap<Deadline>,
+    /// Senders for the per-worker work channels.
+    worker_task_senders: HashMap<u32, mpsc::Sender<TaskEvent>>,
+    /// Partial multiplication results indexed by their `k` coordinate.
+    pub partial_results: HashMap<usize, u32>,
     task_events_receiver: mpsc::Receiver<TaskEvent>,
     monitor_events_sender: mpsc::Sender<MonitorEvent>,
 }
@@ -59,6 +64,8 @@ impl Orchestrator {
             timeout: timeout,
             check_frequency: check_frequency,
             deadlines: BinaryHeap::new(),
+            worker_task_senders: HashMap::new(),
+            partial_results: HashMap::new(),
         }
     }
 
@@ -84,6 +91,8 @@ impl Orchestrator {
             timeout: config.timeout,
             check_frequency: config.check_frequency,
             deadlines: BinaryHeap::new(),
+            worker_task_senders: HashMap::new(),
+            partial_results: HashMap::new(),
         }
     }
 
@@ -102,17 +111,7 @@ impl Orchestrator {
 
     pub fn run(mut self) {
         loop {
-            while let Ok(event) = self.task_events_receiver.try_recv() {
-                match event.task {
-                    TaskResult { result } => {
-                        self.handle_task_result(event.task_id, event.worker_id, result)
-                    }
-                    TaskTimeout {} => self.handle_timeout(event),
-                    TaskInput { input } => {
-                        self.handle_task_input(event.task_id, event.worker_id, input)
-                    }
-                }
-            }
+            self.process_incoming_tasks();
 
             // TODO: Send out new calculations, received via orders? later
 
@@ -156,6 +155,54 @@ impl Orchestrator {
 
     pub fn get_worker_queue_size(&mut self) -> usize {
         self.available_workers.len()
+    }
+
+    /// Registers a worker's inbound work channel with this orchestrator.
+    pub fn register_worker_channel(&mut self, worker_id: u32, sender: mpsc::Sender<TaskEvent>) {
+        self.worker_task_senders.insert(worker_id, sender);
+    }
+
+    /// Assigns a multiplication task to the next available registered worker.
+    /// Returns the selected worker id on success.
+    pub fn dispatch_multiply(
+        &mut self,
+        task_id: u32,
+        a: u32,
+        b: u32,
+        k: usize,
+    ) -> Result<u32, String> {
+        if self.open_tasks.contains(&task_id) {
+            return Err(format!("Task {} is already open", task_id));
+        }
+
+        let worker_id = self.pull_worker();
+        let Some(sender) = self.worker_task_senders.get(&worker_id) else {
+            self.push_worker(worker_id);
+            return Err(format!(
+                "Worker {} has no registered work channel",
+                worker_id
+            ));
+        };
+
+        if sender
+            .send(TaskEvent::new(worker_id, task_id, Multiply { a, b, k }))
+            .is_err()
+        {
+            self.push_worker(worker_id);
+            return Err(format!("Worker {} work channel is disconnected", worker_id));
+        }
+
+        self.busy_workers.insert(worker_id);
+        self.open_tasks.insert(task_id);
+        self.monitor_events_sender
+            .send(MonitorEvent::new(
+                self.id,
+                SystemTime::now(),
+                Source::Orchestrator,
+                EventPayload::TaskAssigned { task_id, worker_id },
+            ))
+            .unwrap();
+        Ok(worker_id)
     }
 
     pub fn receive_result(&self, worker_id: u32, task_result: u32) -> (u32, u32) {
@@ -273,6 +320,37 @@ impl Orchestrator {
                 },
             ))
             .unwrap();
+    }
+
+    pub fn handle_partial_result(&mut self, task_id: u32, worker_id: u32, value: u32, k: usize) {
+        self.partial_results.insert(k, value);
+        self.handle_task_result(task_id, worker_id, value);
+
+        if self.busy_workers.remove(&worker_id) {
+            self.push_worker(worker_id);
+        }
+    }
+
+    /// Drains results sent by workers. Kept public so callers that own the
+    /// event loop can drive the orchestrator without starting `run`.
+    pub fn process_incoming_tasks(&mut self) {
+        while let Ok(event) = self.task_events_receiver.try_recv() {
+            match event.task {
+                TaskResult { result } => {
+                    self.handle_task_result(event.task_id, event.worker_id, result)
+                }
+                TaskTimeout {} => self.handle_timeout(event),
+                TaskInput { input } => {
+                    self.handle_task_input(event.task_id, event.worker_id, input)
+                }
+                PartialResult { value, k } => {
+                    self.handle_partial_result(event.task_id, event.worker_id, value, k)
+                }
+                Multiply { .. } => {
+                    // Multiply tasks only travel from orchestrator to workers.
+                }
+            }
+        }
     }
 
     pub fn handle_task_creation(&mut self, task_id: u32, worker_id: u32, input: u32) {
