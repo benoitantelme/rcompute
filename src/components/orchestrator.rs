@@ -34,6 +34,9 @@ pub struct Orchestrator {
     worker_task_senders: HashMap<u32, mpsc::Sender<TaskEvent>>,
     /// Partial multiplication results indexed by their `k` coordinate.
     pub partial_results: HashMap<usize, u32>,
+    /// The matrix assembled by the most recent 3 by 3 SUMMA calculation.
+    pub result_matrix: [[u32; 3]; 3],
+    summa_assignments: HashMap<u32, (usize, usize)>,
     task_events_receiver: mpsc::Receiver<TaskEvent>,
     monitor_events_sender: mpsc::Sender<MonitorEvent>,
 }
@@ -66,6 +69,8 @@ impl Orchestrator {
             deadlines: BinaryHeap::new(),
             worker_task_senders: HashMap::new(),
             partial_results: HashMap::new(),
+            result_matrix: [[0; 3]; 3],
+            summa_assignments: HashMap::new(),
         }
     }
 
@@ -93,6 +98,8 @@ impl Orchestrator {
             deadlines: BinaryHeap::new(),
             worker_task_senders: HashMap::new(),
             partial_results: HashMap::new(),
+            result_matrix: [[0; 3]; 3],
+            summa_assignments: HashMap::new(),
         }
     }
 
@@ -205,6 +212,88 @@ impl Orchestrator {
         Ok(worker_id)
     }
 
+    /// Multiplies two 3 by 3 matrices using a 3 by 3 SUMMA worker grid.
+    ///
+    /// Workers 1 through 9 represent grid cells in row-major order: worker 1
+    /// owns C[0][0], worker 2 owns C[0][1], and so on. For each `k`, the
+    /// orchestrator sends A[i][k] * B[k][j] to the worker that owns C[i][j].
+    pub fn multiply_summa(
+        &mut self,
+        a: [[u32; 3]; 3],
+        b: [[u32; 3]; 3],
+    ) -> Result<[[u32; 3]; 3], String> {
+        self.result_matrix = [[0; 3]; 3];
+        self.summa_assignments.clear();
+
+        for k in 0..3 {
+            for i in 0..3 {
+                for j in 0..3 {
+                    let worker_id = (i * 3 + j + 1) as u32;
+                    let task_id = (k * 9 + i * 3 + j + 1) as u32;
+                    self.dispatch_multiply_to_worker(worker_id, task_id, a[i][k], b[k][j], k)?;
+                    self.summa_assignments.insert(task_id, (i, j));
+                }
+            }
+
+            for _ in 0..9 {
+                let event = self
+                    .task_events_receiver
+                    .recv_timeout(Duration::from_secs(1))
+                    .map_err(|_| format!("Timed out waiting for SUMMA iteration {k} results"))?;
+                self.handle_task_event(event)?;
+            }
+        }
+
+        Ok(self.result_matrix)
+    }
+
+    fn dispatch_multiply_to_worker(
+        &mut self,
+        worker_id: u32,
+        task_id: u32,
+        a: u32,
+        b: u32,
+        k: usize,
+    ) -> Result<(), String> {
+        let Some(position) = self
+            .available_workers
+            .iter()
+            .position(|available_id| *available_id == worker_id)
+        else {
+            return Err(format!("SUMMA worker {worker_id} is not available"));
+        };
+        self.available_workers.remove(position);
+
+        let Some(sender) = self.worker_task_senders.get(&worker_id) else {
+            self.push_worker(worker_id);
+            return Err(format!(
+                "SUMMA worker {worker_id} has no registered work channel"
+            ));
+        };
+
+        if sender
+            .send(TaskEvent::new(worker_id, task_id, Multiply { a, b, k }))
+            .is_err()
+        {
+            self.push_worker(worker_id);
+            return Err(format!(
+                "SUMMA worker {worker_id} work channel is disconnected"
+            ));
+        }
+
+        self.busy_workers.insert(worker_id);
+        self.open_tasks.insert(task_id);
+        self.monitor_events_sender
+            .send(MonitorEvent::new(
+                self.id,
+                SystemTime::now(),
+                Source::Orchestrator,
+                EventPayload::TaskAssigned { task_id, worker_id },
+            ))
+            .unwrap();
+        Ok(())
+    }
+
     // TODO: see if possible to return last non achieved timeout so we can sleep for that duration
     fn detect_timeouts(&mut self) {
         if self.deadlines.is_empty() {
@@ -265,6 +354,9 @@ impl Orchestrator {
 
     pub fn handle_partial_result(&mut self, task_id: u32, worker_id: u32, value: u32, k: usize) {
         self.partial_results.insert(k, value);
+        if let Some((i, j)) = self.summa_assignments.remove(&task_id) {
+            self.result_matrix[i][j] += value;
+        }
         self.open_tasks.remove(&task_id);
         self.closed_tasks.insert(task_id);
 
@@ -286,15 +378,23 @@ impl Orchestrator {
     /// event loop can drive the orchestrator without starting `run`.
     pub fn process_incoming_tasks(&mut self) {
         while let Ok(event) = self.task_events_receiver.try_recv() {
-            match event.task {
-                TaskTimeout {} => self.handle_timeout(event),
-                PartialResult { value, k } => {
-                    self.handle_partial_result(event.task_id, event.worker_id, value, k)
-                }
-                Multiply { .. } => {
-                    // Multiply tasks only travel from orchestrator to workers.
-                }
+            // A non-SUMMA event cannot fail this non-blocking maintenance path.
+            let _ = self.handle_task_event(event);
+        }
+    }
+
+    fn handle_task_event(&mut self, event: TaskEvent) -> Result<(), String> {
+        match event.task {
+            TaskTimeout {} => {
+                let worker_id = event.worker_id;
+                self.handle_timeout(event);
+                Err(format!("Worker {worker_id} timed out"))
             }
+            PartialResult { value, k } => {
+                self.handle_partial_result(event.task_id, event.worker_id, value, k);
+                Ok(())
+            }
+            Multiply { .. } => Err("Orchestrator received a Multiply task".to_string()),
         }
     }
 }
