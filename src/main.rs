@@ -3,7 +3,6 @@ use rcompute::components::monitor::Monitor;
 use rcompute::components::orchestrator::Orchestrator;
 use rcompute::components::task::TaskEvent;
 use rcompute::components::worker::Worker;
-use rcompute::config::app_config::AppConfig;
 
 use std::sync::mpsc;
 use std::time::Duration;
@@ -14,20 +13,10 @@ fn main() {
 
     std::thread::spawn(move || monitor.run());
 
-    let config = AppConfig::read_config();
     const SUMMA_GRID_WORKERS: usize = 3 * 3;
     let (task_tx, task_rx) = mpsc::channel::<TaskEvent>();
-    let mut orchestrator = Orchestrator::new(
-        1,
-        monitor_tx.clone(),
-        task_rx,
-        SUMMA_GRID_WORKERS,
-        config.workers_threshold,
-        config.timeout,
-        config.check_frequency,
-    );
+    let mut orchestrator = Orchestrator::new(1, monitor_tx.clone(), task_rx);
     println!("{}", orchestrator.to_string());
-    orchestrator.initialise();
 
     for worker_id in 1..=SUMMA_GRID_WORKERS as u32 {
         let (worker, work_sender) =
