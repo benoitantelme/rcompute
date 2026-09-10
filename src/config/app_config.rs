@@ -6,8 +6,7 @@ use serde::Deserialize;
 
 #[derive(Default, Debug, PartialEq, Deserialize)]
 pub struct AppConfig {
-    pub workers_number: usize,
-    pub workers_threshold: u32,
+    pub matrix_size: usize,
     pub timeout: u64,
     pub check_frequency: u64,
 }
@@ -25,22 +24,14 @@ impl AppConfig {
             .expect(&("Failed to extract configuration from ".to_string() + config_path));
 
         Self {
-            workers_number: config.workers_number,
-            workers_threshold: config.workers_threshold,
+            matrix_size: config.matrix_size,
             timeout: config.timeout,
             check_frequency: config.check_frequency,
         }
     }
 
-    pub fn set_config(
-        &mut self,
-        workers_number: usize,
-        workers_threshold: u32,
-        timeout: u64,
-        check_frequency: u64,
-    ) {
-        self.workers_number = workers_number;
-        self.workers_threshold = workers_threshold;
+    pub fn set_config(&mut self, matrix_size: usize, timeout: u64, check_frequency: u64) {
+        self.matrix_size = matrix_size;
         self.timeout = timeout;
         self.check_frequency = check_frequency;
     }
