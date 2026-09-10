@@ -7,7 +7,7 @@ use std::sync::mpsc;
 fn orchestrator_setup() {
     let (monitor_sender, _monitor_receiver) = mpsc::channel::<MonitorEvent>();
     let (_result_sender, result_receiver) = mpsc::channel::<TaskEvent>();
-    let mut orchestrator = Orchestrator::new(1, monitor_sender, result_receiver);
+    let mut orchestrator = Orchestrator::new(1, monitor_sender, result_receiver, 3);
     let (work_sender, _work_receiver) = mpsc::channel::<TaskEvent>();
 
     assert!(orchestrator.workers.is_empty());

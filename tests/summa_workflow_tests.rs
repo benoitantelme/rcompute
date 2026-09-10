@@ -14,7 +14,7 @@ fn summa_multiplies_matrices_with_a_three_by_three_worker_grid() {
     let orchestrator_events = monitor.orchestrator_events.clone();
     let worker_events = monitor.workers_events.clone();
     std::thread::spawn(move || monitor.run());
-    let mut orchestrator = Orchestrator::new(1, monitor_sender.clone(), result_receiver);
+    let mut orchestrator = Orchestrator::new(1, monitor_sender.clone(), result_receiver, 3);
 
     for worker_id in 1..=9 {
         let (worker, work_sender) =

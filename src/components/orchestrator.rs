@@ -3,6 +3,7 @@ use crate::components::task::{
     Task::{Multiply, PartialResult, TaskTimeout},
     TaskEvent,
 };
+use crate::config::app_config::AppConfig;
 
 use std::collections::{HashMap, HashSet};
 use std::fmt;
@@ -19,6 +20,7 @@ const SUMMA_DIMENSION: usize = 3;
 /// row-major 3 by 3 grid of C matrix cells.
 pub struct Orchestrator {
     pub id: u32,
+    pub matrix_size: usize,
     pub workers: HashSet<u32>,
     pub busy_workers: HashSet<u32>,
     pub open_tasks: HashSet<u32>,
@@ -39,9 +41,11 @@ impl Orchestrator {
         id: u32,
         monitor_events_sender: mpsc::Sender<MonitorEvent>,
         task_events_receiver: mpsc::Receiver<TaskEvent>,
+        matrix_size: usize,
     ) -> Self {
         Self {
             id,
+            matrix_size,
             workers: HashSet::new(),
             busy_workers: HashSet::new(),
             open_tasks: HashSet::new(),
@@ -54,6 +58,21 @@ impl Orchestrator {
             task_events_receiver,
             monitor_events_sender,
         }
+    }
+
+    /// Creates an orchestrator configured for a matrix of the configured size.
+    pub fn from_config(
+        id: u32,
+        monitor_events_sender: mpsc::Sender<MonitorEvent>,
+        task_events_receiver: mpsc::Receiver<TaskEvent>,
+        config: AppConfig,
+    ) -> Self {
+        Self::new(
+            id,
+            monitor_events_sender,
+            task_events_receiver,
+            config.matrix_size,
+        )
     }
 
     /// Registers a real worker and the channel on which it receives work.
@@ -79,6 +98,12 @@ impl Orchestrator {
         a: [[u32; SUMMA_DIMENSION]; SUMMA_DIMENSION],
         b: [[u32; SUMMA_DIMENSION]; SUMMA_DIMENSION],
     ) -> Result<[[u32; SUMMA_DIMENSION]; SUMMA_DIMENSION], String> {
+        if self.matrix_size != SUMMA_DIMENSION {
+            return Err(format!(
+                "This SUMMA implementation supports matrix_size {SUMMA_DIMENSION}, got {}",
+                self.matrix_size
+            ));
+        }
         self.ensure_summa_grid()?;
         self.result_matrix = [[0; SUMMA_DIMENSION]; SUMMA_DIMENSION];
         self.summa_assignments.clear();

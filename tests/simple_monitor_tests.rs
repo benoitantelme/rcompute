@@ -15,7 +15,7 @@ fn monitor_records_orchestrator_and_worker_summa_events() {
     let worker_events = monitor.workers_events.clone();
     std::thread::spawn(move || monitor.run());
 
-    let mut orchestrator = Orchestrator::new(1, monitor_sender.clone(), result_receiver);
+    let mut orchestrator = Orchestrator::new(1, monitor_sender.clone(), result_receiver, 3);
     for worker_id in 1..=9 {
         let (worker, work_sender) =
             Worker::with_work_channel(worker_id, result_sender.clone(), monitor_sender.clone());
