@@ -29,7 +29,7 @@ Assigning workers for the calculation grid of size n*n (no worker queue).
   - [x] **3** — SUMMA computation
   - [x] **4** — Cleanup of old code
   - [x] **5** — Update with timeouts
-  - [ ] **6** — Monitor logging parameter
+  - [x] **6** — Monitor logging parameter
   - [ ] **7** — Failure management
   - [ ] **8** — ......
 
