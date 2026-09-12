@@ -1,6 +1,10 @@
 # rcompute
 Distributed computing in rust
 
+## Description
+
+Rust distributed matrix multiplication calculator, using SUMMA algorithm.\
+Assigning workers for the calculation grid of size n*n (no worker queue).
 
 ## Project Roadmap
 
@@ -23,9 +27,10 @@ Distributed computing in rust
   - [x] **1** — Specification, algorithm, ''map reduce'', ...
   - [x] **2** — Single thread execution for unit tests setup
   - [x] **3** — SUMMA computation
-  - [ ] **4** — Cleanup of old code
-  - [ ] **5** — Update with timeouts, failure management, ...
-  - [ ] **6** — ......
+  - [x] **4** — Cleanup of old code
+  - [x] **5** — Update with timeouts
+  - [ ] **6** — Failure management
+  - [ ] **7** — ......
 
 ## Local Development
 
@@ -40,7 +45,7 @@ cargo run
 
 ## More details
 
-- [Main specification](specs/DistributedComputing.md)
+- [Main (old) specification](specs/DistributedComputing.md)
 - [Matrix Multiplication Basics](specs/MatrixMultiplicationBasics.md)
 - [Scalable Universal Matrix Multiplication Algorithm](specs/ScalableUniversalMatrixMultiplicationAlgorithm.md)
 - [SUMMA Summary](specs/SummaSummary.md)
