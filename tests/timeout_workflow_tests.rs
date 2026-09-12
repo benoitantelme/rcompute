@@ -32,5 +32,5 @@ fn overdue_multiplications_are_recorded_as_failed() {
             .is_err()
     );
     assert!(orchestrator.failed_tasks.contains(&1));
-    assert!(!orchestrator.open_tasks.contains(&1));
+    assert!(!orchestrator.open_tasks.contains_key(&1));
 }
