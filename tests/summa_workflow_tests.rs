@@ -10,7 +10,7 @@ use std::time::Duration;
 fn summa_multiplies_matrices_with_a_three_by_three_worker_grid() {
     let (monitor_sender, monitor_receiver) = mpsc::channel::<MonitorEvent>();
     let (result_sender, result_receiver) = mpsc::channel::<TaskEvent>();
-    let monitor = Monitor::new(1, monitor_receiver);
+    let monitor = Monitor::new(1, monitor_receiver, false);
     let orchestrator_events = monitor.orchestrator_events.clone();
     let worker_events = monitor.workers_events.clone();
     std::thread::spawn(move || monitor.run());

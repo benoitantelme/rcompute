@@ -10,7 +10,7 @@ use std::time::Duration;
 fn monitor_records_orchestrator_and_worker_summa_events() {
     let (monitor_sender, monitor_receiver) = mpsc::channel::<MonitorEvent>();
     let (result_sender, result_receiver) = mpsc::channel::<TaskEvent>();
-    let monitor = Monitor::new(1, monitor_receiver);
+    let monitor = Monitor::new(1, monitor_receiver, false);
     let orchestrator_events = monitor.orchestrator_events.clone();
     let worker_events = monitor.workers_events.clone();
     std::thread::spawn(move || monitor.run());
