@@ -8,10 +8,10 @@ use crate::config::app_config::AppConfig;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::sync::mpsc;
-use std::time::{Duration, SystemTime};
+use std::time::{Duration, Instant, SystemTime};
 
 const ORCHESTRATOR: &str = "Orchestrator: ";
-const SUMMA_DIMENSION: usize = 3;
+const MATRIX_SIZE: usize = 3;
 
 /// Coordinates real workers and records calculation state.
 ///
@@ -29,9 +29,13 @@ pub struct Orchestrator {
     /// Most recent scalar result for each SUMMA iteration k.
     pub partial_results: HashMap<usize, u32>,
     /// The matrix assembled by the most recent 3 by 3 SUMMA calculation.
-    pub result_matrix: [[u32; SUMMA_DIMENSION]; SUMMA_DIMENSION],
+    pub result_matrix: [[u32; MATRIX_SIZE]; MATRIX_SIZE],
     worker_task_senders: HashMap<u32, mpsc::Sender<TaskEvent>>,
     summa_assignments: HashMap<u32, (usize, usize)>,
+    /// The worker and dispatch time for every multiplication still in flight.
+    in_progress_tasks: HashMap<u32, (u32, Instant)>,
+    task_timeout: Option<Duration>,
+    timeout_check_frequency: Duration,
     task_events_receiver: mpsc::Receiver<TaskEvent>,
     monitor_events_sender: mpsc::Sender<MonitorEvent>,
 }
@@ -52,9 +56,14 @@ impl Orchestrator {
             closed_tasks: HashSet::new(),
             failed_tasks: HashSet::new(),
             partial_results: HashMap::new(),
-            result_matrix: [[0; SUMMA_DIMENSION]; SUMMA_DIMENSION],
+            result_matrix: [[0; MATRIX_SIZE]; MATRIX_SIZE],
             worker_task_senders: HashMap::new(),
             summa_assignments: HashMap::new(),
+            in_progress_tasks: HashMap::new(),
+            // `new` is retained for callers that do not supply configuration;
+            // timeout enforcement is enabled by `from_config`.
+            task_timeout: None,
+            timeout_check_frequency: Duration::from_secs(1),
             task_events_receiver,
             monitor_events_sender,
         }
@@ -67,12 +76,20 @@ impl Orchestrator {
         task_events_receiver: mpsc::Receiver<TaskEvent>,
         config: AppConfig,
     ) -> Self {
-        Self::new(
+        let mut orchestrator = Self::new(
             id,
             monitor_events_sender,
             task_events_receiver,
             config.matrix_size,
-        )
+        );
+        
+        orchestrator.task_timeout =
+            (config.timeout != 0).then(|| Duration::from_millis(config.timeout));
+        
+        // A zero frequency is invalid for a periodic poll and would cause a
+        // busy loop, so use a small safe interval in that case.
+        orchestrator.timeout_check_frequency = Duration::from_millis(config.check_frequency.max(1));
+        orchestrator
     }
 
     /// Registers a real worker and the channel on which it receives work.
@@ -83,8 +100,17 @@ impl Orchestrator {
 
     /// Processes worker results until all worker result senders are dropped.
     pub fn run(mut self) {
-        while let Ok(event) = self.task_events_receiver.recv() {
-            let _ = self.handle_task_event(event);
+        loop {
+            match self
+                .task_events_receiver
+                .recv_timeout(self.timeout_check_frequency)
+            {
+                Ok(event) => {
+                    let _ = self.handle_task_event(event);
+                }
+                Err(mpsc::RecvTimeoutError::Timeout) => self.check_task_timeouts(),
+                Err(mpsc::RecvTimeoutError::Disconnected) => break,
+            }
         }
     }
 
@@ -95,37 +121,49 @@ impl Orchestrator {
     /// orchestrator sends A[i][k] * B[k][j] to the worker that owns C[i][j].
     pub fn multiply_summa(
         &mut self,
-        a: [[u32; SUMMA_DIMENSION]; SUMMA_DIMENSION],
-        b: [[u32; SUMMA_DIMENSION]; SUMMA_DIMENSION],
-    ) -> Result<[[u32; SUMMA_DIMENSION]; SUMMA_DIMENSION], String> {
-        if self.matrix_size != SUMMA_DIMENSION {
+        a: [[u32; MATRIX_SIZE]; MATRIX_SIZE],
+        b: [[u32; MATRIX_SIZE]; MATRIX_SIZE],
+    ) -> Result<[[u32; MATRIX_SIZE]; MATRIX_SIZE], String> {
+        if self.matrix_size != MATRIX_SIZE {
             return Err(format!(
-                "This SUMMA implementation supports matrix_size {SUMMA_DIMENSION}, got {}",
+                "This SUMMA implementation supports matrix_size {MATRIX_SIZE}, got {}",
                 self.matrix_size
             ));
         }
+
         self.ensure_summa_grid()?;
-        self.result_matrix = [[0; SUMMA_DIMENSION]; SUMMA_DIMENSION];
+        self.result_matrix = [[0; MATRIX_SIZE]; MATRIX_SIZE];
         self.summa_assignments.clear();
 
-        for k in 0..SUMMA_DIMENSION {
-            for i in 0..SUMMA_DIMENSION {
-                for j in 0..SUMMA_DIMENSION {
-                    let worker_id = (i * SUMMA_DIMENSION + j + 1) as u32;
-                    let task_id =
-                        (k * SUMMA_DIMENSION * SUMMA_DIMENSION + i * SUMMA_DIMENSION + j + 1)
-                            as u32;
+        for k in 0..MATRIX_SIZE {
+            for i in 0..MATRIX_SIZE {
+                for j in 0..MATRIX_SIZE {
+                    let worker_id = (i * MATRIX_SIZE + j + 1) as u32;
+                    let task_id = (k * MATRIX_SIZE * MATRIX_SIZE + i * MATRIX_SIZE + j + 1) as u32;
                     self.dispatch_multiply_to_worker(worker_id, task_id, a[i][k], b[k][j], k)?;
                     self.summa_assignments.insert(task_id, (i, j));
                 }
             }
 
-            for _ in 0..SUMMA_DIMENSION * SUMMA_DIMENSION {
-                let event = self
+            while self.open_tasks.len() > 0 {
+                match self
                     .task_events_receiver
-                    .recv_timeout(Duration::from_secs(1))
-                    .map_err(|_| format!("Timed out waiting for SUMMA iteration {k} results"))?;
-                self.handle_task_event(event)?;
+                    .recv_timeout(self.timeout_check_frequency)
+                {
+                    Ok(event) => self.handle_task_event(event)?,
+                    Err(mpsc::RecvTimeoutError::Timeout) => self.check_task_timeouts(),
+                    Err(mpsc::RecvTimeoutError::Disconnected) => {
+                        return Err(format!(
+                            "Worker results disconnected during SUMMA iteration {k}"
+                        ));
+                    }
+                }
+
+                if self.failed_tasks.len() > 0 {
+                    return Err(format!(
+                        "SUMMA iteration {k} has failed multiplication tasks"
+                    ));
+                }
             }
         }
 
@@ -133,7 +171,7 @@ impl Orchestrator {
     }
 
     fn ensure_summa_grid(&self) -> Result<(), String> {
-        for worker_id in 1..=(SUMMA_DIMENSION * SUMMA_DIMENSION) as u32 {
+        for worker_id in 1..=(MATRIX_SIZE * MATRIX_SIZE) as u32 {
             if !self.workers.contains(&worker_id) {
                 return Err(format!("SUMMA worker {worker_id} is not registered"));
             }
@@ -160,6 +198,7 @@ impl Orchestrator {
             self.busy_workers.remove(&worker_id);
             return Err(format!("Worker {worker_id} has no registered work channel"));
         };
+
         if sender
             .send(TaskEvent::new(worker_id, task_id, Multiply { a, b, k }))
             .is_err()
@@ -169,6 +208,9 @@ impl Orchestrator {
         }
 
         self.open_tasks.insert(task_id);
+        self.in_progress_tasks
+            .insert(task_id, (worker_id, Instant::now()));
+        
         self.monitor_events_sender
             .send(MonitorEvent::new(
                 self.id,
@@ -181,6 +223,9 @@ impl Orchestrator {
     }
 
     pub fn handle_timeout(&mut self, task_event: TaskEvent) {
+        if !self.open_tasks.remove(&task_event.task_id) {
+            return;
+        }
         self.monitor_events_sender
             .send(MonitorEvent::new(
                 self.id,
@@ -193,17 +238,24 @@ impl Orchestrator {
                 },
             ))
             .unwrap();
-        self.open_tasks.remove(&task_event.task_id);
+
+        self.in_progress_tasks.remove(&task_event.task_id);
         self.failed_tasks.insert(task_event.task_id);
         self.busy_workers.remove(&task_event.worker_id);
     }
 
     pub fn handle_partial_result(&mut self, task_id: u32, worker_id: u32, value: u32, k: usize) {
+        // Don't process results that arrive after the timeout 
+        if !self.open_tasks.remove(&task_id) {
+            return;
+        }
+
         self.partial_results.insert(k, value);
         if let Some((i, j)) = self.summa_assignments.remove(&task_id) {
             self.result_matrix[i][j] += value;
         }
-        self.open_tasks.remove(&task_id);
+
+        self.in_progress_tasks.remove(&task_id);
         self.closed_tasks.insert(task_id);
         self.busy_workers.remove(&worker_id);
 
@@ -217,10 +269,29 @@ impl Orchestrator {
             .unwrap();
     }
 
-    /// Drains currently available worker results without blocking.
+    /// Process available results
     pub fn process_incoming_tasks(&mut self) {
         while let Ok(event) = self.task_events_receiver.try_recv() {
             let _ = self.handle_task_event(event);
+        }
+        self.check_task_timeouts();
+    }
+
+    pub fn check_task_timeouts(&mut self) {
+        let Some(timeout) = self.task_timeout else {
+            return;
+        };
+
+        let expired_tasks: Vec<_> = self
+            .in_progress_tasks
+            .iter()
+            .filter_map(|(&task_id, &(worker_id, started_at))| {
+                (started_at.elapsed() >= timeout).then_some((task_id, worker_id))
+            })
+            .collect();
+
+        for (task_id, worker_id) in expired_tasks {
+            self.handle_timeout(TaskEvent::new(worker_id, task_id, TaskTimeout {}));
         }
     }
 
