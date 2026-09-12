@@ -13,20 +13,25 @@ pub struct Monitor {
     pub orchestrator_events: Arc<RwLock<Vec<MonitorEvent>>>,
     pub workers_events: Arc<RwLock<Vec<MonitorEvent>>>,
     receiver: mpsc::Receiver<MonitorEvent>,
+    display: bool,
 }
 
 impl Monitor {
-    pub fn new(id: u32, receiver: mpsc::Receiver<MonitorEvent>) -> Self {
+    pub fn new(id: u32, receiver: mpsc::Receiver<MonitorEvent>, display: bool) -> Self {
         Self {
             id: id,
             receiver: receiver,
             orchestrator_events: Arc::new(RwLock::new(Vec::new())),
             workers_events: Arc::new(RwLock::new(Vec::new())),
+            display: display,
         }
     }
 
     fn get_history(&self, source: &Source) -> &Arc<RwLock<Vec<MonitorEvent>>> {
-        println!("{} {} returning {} history", MONITOR, self.id, source);
+        if self.display {
+            println!("{} {} returning {} history", MONITOR, self.id, source);
+        }
+        
         let events_history: &Arc<RwLock<Vec<MonitorEvent>>> = match source {
             Source::Orchestrator => &self.orchestrator_events,
             Source::Worker(_) => &self.workers_events,
@@ -41,44 +46,56 @@ impl Monitor {
             while let Ok(event) = self.receiver.try_recv() {
                 match &event.payload {
                     EventPayload::TaskAssigned { task_id, worker_id } => {
-                        println!(
-                            "{}Task from {} assigned {} to {}",
-                            MONITOR, event.source, task_id, worker_id
-                        );
+                        if self.display {
+                            println!(
+                                "{}Task from {} assigned {} to {}",
+                                MONITOR, event.source, task_id, worker_id
+                            );
+                        }
                     }
                     EventPayload::TaskStarted { task_id, worker_id } => {
-                        println!(
-                            "{}Task from {} started {} by {}",
-                            MONITOR, event.source, task_id, worker_id
-                        );
+                        if self.display {
+                            println!(
+                                "{}Task from {} started {} by {}",
+                                MONITOR, event.source, task_id, worker_id
+                            );
+                        }
                     }
                     EventPayload::TaskCompleted { task_id, worker_id } => {
-                        println!(
-                            "{}Task from {} completed {} by {}",
-                            MONITOR, event.source, task_id, worker_id
-                        );
+                        if self.display {
+                            println!(
+                                "{}Task from {} completed {} by {}",
+                                MONITOR, event.source, task_id, worker_id
+                            );
+                        }
                     }
                     EventPayload::TaskDuplicated { task_id, worker_id } => {
-                        println!(
-                            "{}Task from {} duplicated {} by {}",
-                            MONITOR, event.source, task_id, worker_id
-                        );
+                        if self.display {
+                            println!(
+                                "{}Task from {} duplicated {} by {}",
+                                MONITOR, event.source, task_id, worker_id
+                            );
+                        }
                     }
                     EventPayload::TaskOrdered { task_id, worker_id } => {
-                        println!(
-                            "{}Task from {} ordered {} by {}",
-                            MONITOR, event.source, task_id, worker_id
-                        );
+                        if self.display {
+                            println!(
+                                "{}Task from {} ordered {} by {}",
+                                MONITOR, event.source, task_id, worker_id
+                            );
+                        }
                     }
                     EventPayload::TaskFailed {
                         task_id,
                         worker_id,
                         reason,
                     } => {
-                        println!(
-                            "{}Task from {} failed with id {} by {} because {}",
-                            MONITOR, event.source, task_id, worker_id, reason
-                        )
+                        if self.display {
+                            println!(
+                                "{}Task from {} failed with id {} by {} because {}",
+                                MONITOR, event.source, task_id, worker_id, reason
+                            );
+                        }
                     }
                 }
 
@@ -92,16 +109,11 @@ impl Monitor {
 
     // async?
     pub fn history(&self, source: Source) -> Vec<MonitorEvent> {
-        println!("{} {} returning {} history", MONITOR, self.id, source);
         let events_history = self.get_history(&source);
         events_history.read().unwrap().clone()
     }
 
     pub async fn events_from_worker(&self, worker_id: u32) -> Vec<MonitorEvent> {
-        println!(
-            "{} {} returning history for worker {}",
-            MONITOR, self.id, worker_id
-        );
         let snapshot = self.workers_events.read().unwrap().clone();
 
         snapshot

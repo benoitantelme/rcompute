@@ -1,3 +1,4 @@
 matrix_size = 3
 timeout = 30000
 check_frequency = 20000
+monitor_display = false

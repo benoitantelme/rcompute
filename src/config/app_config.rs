@@ -9,6 +9,7 @@ pub struct AppConfig {
     pub matrix_size: usize,
     pub timeout: u64,
     pub check_frequency: u64,
+    pub monitor_display: bool,
 }
 
 impl AppConfig {
@@ -27,12 +28,14 @@ impl AppConfig {
             matrix_size: config.matrix_size,
             timeout: config.timeout,
             check_frequency: config.check_frequency,
+            monitor_display: config.monitor_display,
         }
     }
 
-    pub fn set_config(&mut self, matrix_size: usize, timeout: u64, check_frequency: u64) {
+    pub fn set_config(&mut self, matrix_size: usize, timeout: u64, check_frequency: u64, monitor_display: bool) {
         self.matrix_size = matrix_size;
         self.timeout = timeout;
         self.check_frequency = check_frequency;
+        self.monitor_display = monitor_display;
     }
 }

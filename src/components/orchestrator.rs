@@ -129,6 +129,8 @@ impl Orchestrator {
         self.result_matrix = [[0; MATRIX_SIZE]; MATRIX_SIZE];
         self.summa_assignments.clear();
 
+        println!("SUMMA multiplication of {a:?} and {b:?}");
+
         for k in 0..MATRIX_SIZE {
             for i in 0..MATRIX_SIZE {
                 for j in 0..MATRIX_SIZE {

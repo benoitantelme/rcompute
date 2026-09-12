@@ -9,6 +9,7 @@ mod config_test {
         assert_eq!(config.matrix_size, 0);
         assert_eq!(config.timeout, 0);
         assert_eq!(config.check_frequency, 0);
+        assert_eq!(config.monitor_display, false);
     }
 
     #[test]
@@ -18,15 +19,17 @@ mod config_test {
         assert_eq!(config.matrix_size, 3);
         assert_eq!(config.timeout, 30 * 1000);
         assert_eq!(config.check_frequency, 20 * 1000);
+        assert_eq!(config.monitor_display, false);
     }
 
     #[test]
     fn set_config() {
         let mut config: AppConfig = AppConfig::new();
 
-        config.set_config(3, 30, 20);
+        config.set_config(3, 30, 20, false);
         assert_eq!(config.matrix_size, 3);
         assert_eq!(config.timeout, 30);
         assert_eq!(config.check_frequency, 20);
+        assert_eq!(config.monitor_display, false);
     }
 }

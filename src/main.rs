@@ -9,12 +9,12 @@ use std::sync::mpsc;
 use std::time::Duration;
 
 fn main() {
+    let config = AppConfig::read_config();
     let (monitor_tx, monitor_rx) = mpsc::channel::<MonitorEvent>();
-    let monitor = Monitor::new(1, monitor_rx);
+    let monitor = Monitor::new(1, monitor_rx, config.monitor_display);
 
     std::thread::spawn(move || monitor.run());
 
-    let config = AppConfig::read_config();
     let matrix_size = config.matrix_size;
     let (task_tx, task_rx) = mpsc::channel::<TaskEvent>();
     let mut orchestrator = Orchestrator::from_config(1, monitor_tx.clone(), task_rx, config);
