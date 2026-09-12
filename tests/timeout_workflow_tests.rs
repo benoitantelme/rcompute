@@ -10,7 +10,7 @@ fn overdue_multiplications_are_recorded_as_failed() {
     let (monitor_sender, _monitor_receiver) = mpsc::channel::<MonitorEvent>();
     let (result_sender, result_receiver) = mpsc::channel::<TaskEvent>();
     let mut config = AppConfig::new();
-    config.set_config(3, 5, 1);
+    config.set_config(3, 5, 1, false);
     let mut orchestrator =
         Orchestrator::from_config(1, monitor_sender.clone(), result_receiver, config);
 
