@@ -31,7 +31,7 @@ impl Monitor {
         if self.display {
             println!("{} {} returning {} history", MONITOR, self.id, source);
         }
-        
+
         let events_history: &Arc<RwLock<Vec<MonitorEvent>>> = match source {
             Source::Orchestrator => &self.orchestrator_events,
             Source::Worker(_) => &self.workers_events,

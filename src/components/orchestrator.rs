@@ -35,6 +35,8 @@ pub struct Orchestrator {
     worker_task_senders: HashMap<u32, mpsc::Sender<TaskEvent>>,
     task_events_receiver: mpsc::Receiver<TaskEvent>,
     monitor_events_sender: mpsc::Sender<MonitorEvent>,
+
+    pub results: HashMap<u32, Result<[[u32; MATRIX_SIZE]; MATRIX_SIZE], String>>,
 }
 
 impl Orchestrator {
@@ -60,6 +62,7 @@ impl Orchestrator {
             timeout_check_frequency: Duration::from_secs(1),
             task_events_receiver,
             monitor_events_sender,
+            results: HashMap::new(),
         }
     }
 
@@ -119,10 +122,13 @@ impl Orchestrator {
         b: [[u32; MATRIX_SIZE]; MATRIX_SIZE],
     ) -> Result<[[u32; MATRIX_SIZE]; MATRIX_SIZE], String> {
         if self.matrix_size != MATRIX_SIZE {
-            return Err(format!(
+            let error = format!(
                 "This SUMMA implementation supports matrix_size {MATRIX_SIZE}, got {}",
                 self.matrix_size
-            ));
+            );
+            self.results.insert(0, Err(error.clone()));
+
+            return Err(error);
         }
 
         self.ensure_summa_grid()?;
@@ -149,20 +155,27 @@ impl Orchestrator {
                     Ok(event) => self.handle_task_event(event)?,
                     Err(mpsc::RecvTimeoutError::Timeout) => self.check_task_timeouts(),
                     Err(mpsc::RecvTimeoutError::Disconnected) => {
-                        return Err(format!(
-                            "Worker results disconnected during SUMMA iteration {k}"
-                        ));
+                        let error =
+                            format!("Worker results disconnected during SUMMA iteration {k}");
+
+                        self.results.insert(0, Err(error.clone()));
+                        return Err(error);
                     }
                 }
 
                 if self.failed_tasks.len() > 0 {
-                    return Err(format!(
-                        "SUMMA iteration {k} has failed multiplication tasks"
-                    ));
+                    let error = format!(
+                        "SUMMA iteration {k} has failed multiplication tasks: {:?}",
+                        self.failed_tasks
+                    );
+                    self.results.insert(0, Err(error.clone()));
+
+                    return Err(error);
                 }
             }
         }
 
+        self.results.insert(0, Ok(self.result_matrix));
         Ok(self.result_matrix)
     }
 
