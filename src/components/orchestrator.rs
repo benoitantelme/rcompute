@@ -149,7 +149,9 @@ impl Orchestrator {
                     Ok(event) => self.handle_task_event(event)?,
                     Err(mpsc::RecvTimeoutError::Timeout) => self.check_task_timeouts(),
                     Err(mpsc::RecvTimeoutError::Disconnected) => {
-                        return Err(format!("Worker results disconnected during SUMMA iteration {k}"));
+                        return Err(format!(
+                            "Worker results disconnected during SUMMA iteration {k}"
+                        ));
                     }
                 }
 
@@ -161,7 +163,7 @@ impl Orchestrator {
                 }
             }
         }
-        
+
         Ok(self.result_matrix)
     }
 
