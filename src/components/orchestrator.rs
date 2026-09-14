@@ -68,7 +68,7 @@ impl Orchestrator {
         id: u32,
         monitor_events_sender: mpsc::Sender<MonitorEvent>,
         task_events_receiver: mpsc::Receiver<TaskEvent>,
-        config: AppConfig,
+        config: &AppConfig,
     ) -> Self {
         let mut orchestrator = Self::new(
             id,

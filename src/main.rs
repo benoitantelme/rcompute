@@ -11,11 +11,18 @@ fn main() {
 
     std::thread::spawn(move || monitor.run());
 
-    let app = Application::new(1, config, monitor_tx);
+    let mut app = Application::new(1, config, monitor_tx);
 
     let a = [[1, 2, 3], [4, 5, 6], [7, 8, 9]];
     let b = [[9, 8, 7], [6, 5, 4], [3, 2, 1]];
     let c = app.multiply(a, b);
     println!("SUMMA result: {c:?}");
     std::thread::sleep(std::time::Duration::from_millis(50));
+
+    app.results
+        .iter()
+        .for_each(|(calc_id, result)| match result {
+            Ok(matrix) => println!("Calculation {calc_id} result: {matrix:?}"),
+            Err(err) => println!("Calculation {calc_id} error: {err:?}"),
+        });
 }

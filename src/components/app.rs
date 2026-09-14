@@ -31,14 +31,14 @@ impl Application {
     }
 
     pub fn multiply(
-        mut self,
+        &mut self,
         a: [[u32; MATRIX_SIZE]; MATRIX_SIZE],
         b: [[u32; MATRIX_SIZE]; MATRIX_SIZE],
     ) -> [[u32; MATRIX_SIZE]; MATRIX_SIZE] {
         let matrix_size = self.config.matrix_size;
         let (task_tx, task_rx) = mpsc::channel::<TaskEvent>();
         let mut orchestrator =
-            Orchestrator::from_config(1, self.monitor_tx.clone(), task_rx, self.config);
+            Orchestrator::from_config(1, self.monitor_tx.clone(), task_rx, &self.config);
         println!("{}", orchestrator.to_string());
 
         for worker_id in 1..=(matrix_size * matrix_size) as u32 {
