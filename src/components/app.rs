@@ -1,5 +1,4 @@
 use crate::components::event::MonitorEvent;
-use crate::components::monitor::Monitor;
 use crate::components::orchestrator::Orchestrator;
 use crate::components::task::TaskEvent;
 use crate::components::worker::Worker;
@@ -8,35 +7,27 @@ use crate::config::app_config::AppConfig;
 use std::collections::{HashMap, HashSet};
 use std::sync::mpsc;
 
+//TODO: need to check how I can have this configurable
 const MATRIX_SIZE: usize = 3;
 
 pub struct Application {
     pub id: u32,
     // pub matrix_size: usize,
     config: AppConfig,
-    monitor: Monitor,
     monitor_tx: mpsc::Sender<MonitorEvent>,
     pub open_calculations: HashSet<u32>,
     pub results: HashMap<u32, Result<[[u32; MATRIX_SIZE]; MATRIX_SIZE], String>>,
 }
 
 impl Application {
-    pub fn new(id: u32, config: AppConfig) -> Self {
-        let (monitor_tx, monitor_rx) = mpsc::channel::<MonitorEvent>();
-        let monitor = Monitor::new(1, monitor_rx, config.monitor_display);
-
+    pub fn new(id: u32, config: AppConfig, monitor_tx: mpsc::Sender<MonitorEvent>) -> Self {
         Self {
             id,
             config: config,
-            monitor,
             monitor_tx,
             open_calculations: HashSet::new(),
             results: HashMap::new(),
         }
-    }
-
-    pub fn init(self) {
-        std::thread::spawn(move || self.monitor.run());
     }
 
     pub fn multiply(

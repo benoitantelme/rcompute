@@ -27,7 +27,7 @@ impl Monitor {
         }
     }
 
-    fn get_history(&self, source: &Source) -> &Arc<RwLock<Vec<MonitorEvent>>> {
+    pub fn get_history(&self, source: &Source) -> &Arc<RwLock<Vec<MonitorEvent>>> {
         if self.display {
             println!("{} {} returning {} history", MONITOR, self.id, source);
         }
