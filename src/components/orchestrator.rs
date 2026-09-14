@@ -68,7 +68,7 @@ impl Orchestrator {
         id: u32,
         monitor_events_sender: mpsc::Sender<MonitorEvent>,
         task_events_receiver: mpsc::Receiver<TaskEvent>,
-        config: AppConfig,
+        config: &AppConfig,
     ) -> Self {
         let mut orchestrator = Self::new(
             id,
@@ -157,7 +157,8 @@ impl Orchestrator {
 
                 if self.failed_tasks.len() > 0 {
                     return Err(format!(
-                        "SUMMA iteration {k} has failed multiplication tasks"
+                        "SUMMA iteration {k} has failed multiplication tasks: {:?}",
+                        self.failed_tasks
                     ));
                 }
             }
