@@ -32,7 +32,13 @@ impl AppConfig {
         }
     }
 
-    pub fn set_config(&mut self, matrix_size: usize, timeout: u64, check_frequency: u64, monitor_display: bool) {
+    pub fn set_config(
+        &mut self,
+        matrix_size: usize,
+        timeout: u64,
+        check_frequency: u64,
+        monitor_display: bool,
+    ) {
         self.matrix_size = matrix_size;
         self.timeout = timeout;
         self.check_frequency = check_frequency;

@@ -30,7 +30,7 @@ Assigning workers for the calculation grid of size n*n (no worker queue).
   - [x] **4** — Cleanup of old code
   - [x] **5** — Update with timeouts
   - [x] **6** — Monitor logging parameter
-  - [ ] **7** — Failure management
+  - [x] **7** — App setup, single external monitor and cleanup 
   - [ ] **8** — ......
 
 ## Local Development

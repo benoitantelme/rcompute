@@ -12,7 +12,7 @@ fn overdue_multiplications_are_recorded_as_failed() {
     let mut config = AppConfig::new();
     config.set_config(3, 5, 1, false);
     let mut orchestrator =
-        Orchestrator::from_config(1, monitor_sender.clone(), result_receiver, config);
+        Orchestrator::from_config(1, monitor_sender.clone(), result_receiver, &config);
 
     // Keep worker 1's work receiver alive without running it. Its first
     // multiplication therefore has no result and must be timed out locally.

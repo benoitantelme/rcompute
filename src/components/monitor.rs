@@ -27,11 +27,11 @@ impl Monitor {
         }
     }
 
-    fn get_history(&self, source: &Source) -> &Arc<RwLock<Vec<MonitorEvent>>> {
+    pub fn get_history(&self, source: &Source) -> &Arc<RwLock<Vec<MonitorEvent>>> {
         if self.display {
             println!("{} {} returning {} history", MONITOR, self.id, source);
         }
-        
+
         let events_history: &Arc<RwLock<Vec<MonitorEvent>>> = match source {
             Source::Orchestrator => &self.orchestrator_events,
             Source::Worker(_) => &self.workers_events,
