@@ -31,7 +31,7 @@ Assigning workers for the calculation grid of size n*n (no worker queue).
   - [x] **5** — Update with timeouts
   - [x] **6** — Monitor logging parameter
   - [x] **7** — App setup, single external monitor and cleanup 
-  - [ ] **8** — ......
+  - [ ] **8** — Switching to vector instead of arrays to be able to change the matrix size
 
 ## Local Development
 
