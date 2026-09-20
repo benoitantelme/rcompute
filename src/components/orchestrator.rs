@@ -107,9 +107,9 @@ impl Orchestrator {
         }
     }
 
-    /// Multiplies two 3 by 3 matrices using a 3 by 3 SUMMA worker grid.
+    /// Multiplies two n by n matrices using a n by n SUMMA worker grid.
     ///
-    /// Workers 1 through 9 represent grid cells in row-major order: worker 1
+    /// Workers 1 through n*n represent grid cells in row-major order: worker 1
     /// owns C[0][0], worker 2 owns C[0][1], and so on. For each `k`, the
     /// orchestrator sends A[i][k] * B[k][j] to the worker that owns C[i][j].
     pub fn multiply_summa(
