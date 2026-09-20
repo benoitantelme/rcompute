@@ -23,7 +23,7 @@ Assigning workers for the calculation grid of size n*n (no worker queue).
   - [x] **2** — Additional specifications and algorithm
   - [x] **3** — Better configuration and code/apis
 
-- [ ] **Phase Three**: Matrix Multiplication
+- [x] **Phase Three**: Matrix Multiplication
   - [x] **1** — Specification, algorithm, ''map reduce'', ...
   - [x] **2** — Single thread execution for unit tests setup
   - [x] **3** — SUMMA computation
@@ -31,7 +31,7 @@ Assigning workers for the calculation grid of size n*n (no worker queue).
   - [x] **5** — Update with timeouts
   - [x] **6** — Monitor logging parameter
   - [x] **7** — App setup, single external monitor and cleanup 
-  - [ ] **8** — Switching to vector instead of arrays to be able to change the matrix size
+  - [x] **8** — Switching to vector instead of arrays to be able to change the matrix size
 
 ## Local Development
 
