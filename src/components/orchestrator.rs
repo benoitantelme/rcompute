@@ -127,7 +127,9 @@ impl Orchestrator {
             for i in 0..self.matrix_size {
                 for j in 0..self.matrix_size {
                     let worker_id = (i * self.matrix_size + j + 1) as u32;
-                    let task_id = (k * self.matrix_size * self.matrix_size + i * self.matrix_size + j + 1) as u32;
+                    let task_id =
+                        (k * self.matrix_size * self.matrix_size + i * self.matrix_size + j + 1)
+                            as u32;
                     self.dispatch_multiply_to_worker(worker_id, task_id, a[i][k], b[k][j], k)?;
                     self.summa_assignments.insert(task_id, (i, j));
                 }
