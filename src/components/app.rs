@@ -28,11 +28,7 @@ impl Application {
         }
     }
 
-    pub fn multiply(
-        &mut self,
-        a: Vec<Vec<u32>>,
-        b: Vec<Vec<u32>>,
-    ) -> Vec<Vec<u32>> {
+    pub fn multiply(&mut self, a: Vec<Vec<u32>>, b: Vec<Vec<u32>>) -> Vec<Vec<u32>> {
         let matrix_size = self.config.matrix_size;
         let (task_tx, task_rx) = mpsc::channel::<TaskEvent>();
         let mut orchestrator =
@@ -53,4 +49,8 @@ impl Application {
 
         return result;
     }
+}
+
+pub fn to_vector(a: [[u32; 3]; 3]) -> Vec<Vec<u32>> {
+    return a.map(|row| row.to_vec()).to_vec();
 }
