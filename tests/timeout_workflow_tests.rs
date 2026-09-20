@@ -1,3 +1,4 @@
+use rcompute::components::app::to_vector;
 use rcompute::components::event::MonitorEvent;
 use rcompute::components::orchestrator::Orchestrator;
 use rcompute::components::task::TaskEvent;
@@ -28,7 +29,7 @@ fn overdue_multiplications_are_recorded_as_failed() {
 
     assert!(
         orchestrator
-            .multiply_summa([[1; 3]; 3], [[1; 3]; 3])
+            .multiply_summa(to_vector([[1; 3]; 3]), to_vector([[1; 3]; 3]))
             .is_err()
     );
     assert!(orchestrator.failed_tasks.contains(&1));
