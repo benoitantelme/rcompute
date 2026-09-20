@@ -13,8 +13,12 @@ fn main() {
 
     let mut app = Application::new(1, config, monitor_tx);
 
-    let a = [[1, 2, 3], [4, 5, 6], [7, 8, 9]];
-    let b = [[9, 8, 7], [6, 5, 4], [3, 2, 1]];
+    let a = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+        .map(|row| row.to_vec())
+        .to_vec();
+    let b = [[9, 8, 7], [6, 5, 4], [3, 2, 1]]
+        .map(|row| row.to_vec())
+        .to_vec();
     let c = app.multiply(a, b);
     println!("SUMMA result: {c:?}");
     std::thread::sleep(std::time::Duration::from_millis(50));
