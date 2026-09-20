@@ -1,3 +1,4 @@
+use rcompute::components::app::to_vector;
 use rcompute::components::event::{EventPayload, MonitorEvent, Source};
 use rcompute::components::monitor::Monitor;
 use rcompute::components::orchestrator::Orchestrator;
@@ -23,16 +24,16 @@ fn summa_multiplies_matrices_with_a_three_by_three_worker_grid() {
         std::thread::spawn(move || worker.run());
     }
 
-    let a = [[1, 2, 3], [4, 5, 6], [7, 8, 9]];
-    let b = [[9, 8, 7], [6, 5, 4], [3, 2, 1]];
+    let a = to_vector([[1, 2, 3], [4, 5, 6], [7, 8, 9]]);
+    let b = to_vector([[9, 8, 7], [6, 5, 4], [3, 2, 1]]);
 
     assert_eq!(
         orchestrator.multiply_summa(a, b).unwrap(),
-        [[30, 24, 18], [84, 69, 54], [138, 114, 90]]
+        to_vector([[30, 24, 18], [84, 69, 54], [138, 114, 90]])
     );
     assert_eq!(
         orchestrator.result_matrix,
-        [[30, 24, 18], [84, 69, 54], [138, 114, 90]]
+        to_vector([[30, 24, 18], [84, 69, 54], [138, 114, 90]])
     );
     assert_eq!(orchestrator.closed_tasks.len(), 27);
     assert_eq!(orchestrator.workers.len(), 9);

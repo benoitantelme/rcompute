@@ -1,15 +1,18 @@
+use rcompute::components::app::to_vector;
 use rcompute::components::event::MonitorEvent;
 use rcompute::components::orchestrator::Orchestrator;
 use rcompute::components::task::TaskEvent;
 use rcompute::components::worker::Worker;
 use std::sync::mpsc;
 
-fn calculate_summa(a: [[u32; 3]; 3], b: [[u32; 3]; 3]) -> [[u32; 3]; 3] {
+fn calculate_summa(a: Vec<Vec<u32>>, b: Vec<Vec<u32>>, matrix_size: usize) -> Vec<Vec<u32>> {
     let (monitor_sender, _monitor_receiver) = mpsc::channel::<MonitorEvent>();
     let (result_sender, result_receiver) = mpsc::channel::<TaskEvent>();
-    let mut orchestrator = Orchestrator::new(1, monitor_sender.clone(), result_receiver, 3);
+    let mut orchestrator =
+        Orchestrator::new(1, monitor_sender.clone(), result_receiver, matrix_size);
 
-    for worker_id in 1..=9 {
+    let size = (matrix_size * matrix_size) as u32;
+    for worker_id in 1..=size {
         let (worker, work_sender) =
             Worker::with_work_channel(worker_id, result_sender.clone(), monitor_sender.clone());
         orchestrator.register_worker_channel(worker_id, work_sender);
@@ -30,64 +33,200 @@ fn instantiation() {
 }
 
 #[test]
+fn instantiation_four() {
+    let (monitor_sender, _monitor_receiver) = mpsc::channel::<MonitorEvent>();
+    let (_result_sender, result_receiver) = mpsc::channel::<TaskEvent>();
+    let orchestrator = Orchestrator::new(1, monitor_sender, result_receiver, 4);
+
+    assert_eq!(orchestrator.matrix_size, 4);
+    assert_eq!(orchestrator.result_matrix, [[0; 4]; 4]);
+}
+
+#[test]
 fn calculate_ones() {
     assert_eq!(
         calculate_summa(
-            [[1, 1, 1], [1, 1, 1], [1, 1, 1]],
-            [[1, 1, 1], [1, 1, 1], [1, 1, 1]]
+            to_vector([[1, 1, 1], [1, 1, 1], [1, 1, 1]]),
+            to_vector([[1, 1, 1], [1, 1, 1], [1, 1, 1]]),
+            3
         ),
-        [[3, 3, 3], [3, 3, 3], [3, 3, 3]]
+        to_vector([[3, 3, 3], [3, 3, 3], [3, 3, 3]])
+    );
+}
+#[test]
+fn calculate_ones_four() {
+    assert_eq!(
+        calculate_summa(
+            [[1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]]
+                .map(|row| row.to_vec())
+                .to_vec(),
+            [[1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]]
+                .map(|row| row.to_vec())
+                .to_vec(),
+            4
+        ),
+        [[4, 4, 4, 4], [4, 4, 4, 4], [4, 4, 4, 4], [4, 4, 4, 4]]
+            .map(|row| row.to_vec())
+            .to_vec()
     );
 }
 
 #[test]
 fn identity() {
-    let a = [[1, 2, 3], [4, 5, 6], [7, 8, 9]];
-    let identity = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
+    let a = to_vector([[1, 2, 3], [4, 5, 6], [7, 8, 9]]);
+    let identity = to_vector([[1, 0, 0], [0, 1, 0], [0, 0, 1]]);
 
-    assert_eq!(calculate_summa(a, identity), a);
-    assert_eq!(calculate_summa(identity, a), a);
+    assert_eq!(calculate_summa(a.clone(), identity.clone(), 3), a);
+    assert_eq!(calculate_summa(identity.clone(), a.clone(), 3), a);
 }
 
 #[test]
 fn zero() {
-    let a = [[1, 2, 3], [4, 5, 6], [7, 8, 9]];
-    let zero = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+    let a = to_vector([[1, 2, 3], [4, 5, 6], [7, 8, 9]]);
+    let zero = to_vector([[0, 0, 0], [0, 0, 0], [0, 0, 0]]);
 
-    assert_eq!(calculate_summa(a, zero), zero);
-    assert_eq!(calculate_summa(zero, a), zero);
+    assert_eq!(calculate_summa(a.clone(), zero.clone(), 3), zero);
+    assert_eq!(calculate_summa(zero.clone(), a.clone(), 3), zero);
 }
 
 #[test]
 fn example() {
-    let a = [[1, 2, 3], [4, 5, 6], [7, 8, 9]];
-    let b = [[9, 8, 7], [6, 5, 4], [3, 2, 1]];
+    let a = to_vector([[1, 2, 3], [4, 5, 6], [7, 8, 9]]);
+    let b = to_vector([[9, 8, 7], [6, 5, 4], [3, 2, 1]]);
     assert_eq!(
-        calculate_summa(a, b),
-        [[30, 24, 18], [84, 69, 54], [138, 114, 90]]
+        calculate_summa(a.clone(), b.clone(), 3),
+        to_vector([[30, 24, 18], [84, 69, 54], [138, 114, 90]])
     );
 }
 
 #[test]
 fn diagonal() {
-    let a = [[2, 0, 0], [0, 3, 0], [0, 0, 4]];
-    let b = [[5, 0, 0], [0, 6, 0], [0, 0, 7]];
-    assert_eq!(calculate_summa(a, b), [[10, 0, 0], [0, 18, 0], [0, 0, 28]]);
+    let a = to_vector([[2, 0, 0], [0, 3, 0], [0, 0, 4]]);
+    let b = to_vector([[5, 0, 0], [0, 6, 0], [0, 0, 7]]);
+    assert_eq!(
+        calculate_summa(a.clone(), b.clone(), 3),
+        to_vector([[10, 0, 0], [0, 18, 0], [0, 0, 28]])
+    );
 }
 
 #[test]
 fn column() {
-    let a = [[1, 2, 3], [4, 5, 6], [7, 8, 9]];
-    let b = [[0, 0, 0], [0, 1, 0], [0, 0, 0]];
-    assert_eq!(calculate_summa(a, b), [[0, 2, 0], [0, 5, 0], [0, 8, 0]]);
+    let a = to_vector([[1, 2, 3], [4, 5, 6], [7, 8, 9]]);
+    let b = to_vector([[0, 0, 0], [0, 1, 0], [0, 0, 0]]);
+    assert_eq!(
+        calculate_summa(a.clone(), b.clone(), 3),
+        to_vector([[0, 2, 0], [0, 5, 0], [0, 8, 0]])
+    );
+}
+
+#[test]
+fn column_by_five() {
+    let a: Vec<Vec<u32>> = [
+        [1, 2, 3, 4, 5],
+        [6, 7, 8, 9, 10],
+        [11, 12, 13, 14, 15],
+        [16, 17, 18, 19, 20],
+        [21, 22, 23, 24, 25],
+    ]
+    .map(|row| row.to_vec())
+    .to_vec();
+
+    let b: Vec<Vec<u32>> = [
+        [0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0],
+        [0, 0, 1, 0, 0],
+        [0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0],
+    ]
+    .map(|row| row.to_vec())
+    .to_vec();
+    assert_eq!(
+        calculate_summa(a.clone(), b.clone(), 5),
+        [
+            [0, 0, 3, 0, 0],
+            [0, 0, 8, 0, 0],
+            [0, 0, 13, 0, 0],
+            [0, 0, 18, 0, 0],
+            [0, 0, 23, 0, 0],
+        ]
+        .map(|row| row.to_vec())
+        .to_vec()
+    );
 }
 
 #[test]
 fn random() {
-    let a = [[2, 1, 3], [0, 4, 2], [5, 2, 1]];
-    let b = [[1, 3, 2], [4, 0, 1], [2, 5, 3]];
+    let a = to_vector([[2, 1, 3], [0, 4, 2], [5, 2, 1]]);
+    let b = to_vector([[1, 3, 2], [4, 0, 1], [2, 5, 3]]);
     assert_eq!(
-        calculate_summa(a, b),
-        [[12, 21, 14], [20, 10, 10], [15, 20, 15]]
+        calculate_summa(a.clone(), b.clone(), 3),
+        to_vector([[12, 21, 14], [20, 10, 10], [15, 20, 15]])
+    );
+}
+
+#[test]
+fn random_by_four() {
+    let a: Vec<Vec<u32>> = [
+        [1, 2, 3, 4],
+        [5, 6, 7, 8],
+        [9, 10, 11, 12],
+        [13, 14, 15, 16],
+    ]
+    .map(|row| row.to_vec())
+    .to_vec();
+
+    let b: Vec<Vec<u32>> = [
+        [16, 15, 14, 13],
+        [12, 11, 10, 9],
+        [8, 7, 6, 5],
+        [4, 3, 2, 1],
+    ]
+    .map(|row| row.to_vec())
+    .to_vec();
+    assert_eq!(
+        calculate_summa(a.clone(), b.clone(), 4),
+        [
+            [80, 70, 60, 50],
+            [240, 214, 188, 162],
+            [400, 358, 316, 274],
+            [560, 502, 444, 386],
+        ]
+        .map(|row| row.to_vec())
+        .to_vec()
+    );
+}
+
+#[test]
+fn random_by_five() {
+    let a: Vec<Vec<u32>> = [
+        [1, 2, 3, 4, 5],
+        [6, 7, 8, 9, 10],
+        [11, 12, 13, 14, 15],
+        [16, 17, 18, 19, 20],
+        [21, 22, 23, 24, 25],
+    ]
+    .map(|row| row.to_vec())
+    .to_vec();
+
+    let b: Vec<Vec<u32>> = [
+        [25, 24, 23, 22, 21],
+        [20, 19, 18, 17, 16],
+        [15, 14, 13, 12, 11],
+        [10, 9, 8, 7, 6],
+        [5, 4, 3, 2, 1],
+    ]
+    .map(|row| row.to_vec())
+    .to_vec();
+    assert_eq!(
+        calculate_summa(a.clone(), b.clone(), 5),
+        [
+            [175, 160, 145, 130, 115],
+            [550, 510, 470, 430, 390],
+            [925, 860, 795, 730, 665],
+            [1300, 1210, 1120, 1030, 940],
+            [1675, 1560, 1445, 1330, 1215],
+        ]
+        .map(|row| row.to_vec())
+        .to_vec()
     );
 }

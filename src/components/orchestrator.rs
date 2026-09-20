@@ -11,7 +11,6 @@ use std::sync::mpsc;
 use std::time::{Duration, Instant, SystemTime};
 
 const ORCHESTRATOR: &str = "Orchestrator: ";
-const MATRIX_SIZE: usize = 3;
 
 pub struct Orchestrator {
     pub id: u32,
@@ -26,7 +25,7 @@ pub struct Orchestrator {
 
     /// Most recent scalar result for each SUMMA iteration k
     pub partial_results: HashMap<usize, u32>,
-    pub result_matrix: [[u32; MATRIX_SIZE]; MATRIX_SIZE],
+    pub result_matrix: Vec<Vec<u32>>,
     summa_assignments: HashMap<u32, (usize, usize)>,
 
     task_timeout: Option<Duration>,
@@ -53,7 +52,7 @@ impl Orchestrator {
             closed_tasks: HashSet::new(),
             failed_tasks: HashSet::new(),
             partial_results: HashMap::new(),
-            result_matrix: [[0; MATRIX_SIZE]; MATRIX_SIZE],
+            result_matrix: vec![vec![0; matrix_size]; matrix_size],
             worker_task_senders: HashMap::new(),
             summa_assignments: HashMap::new(),
             task_timeout: None,
@@ -108,34 +107,29 @@ impl Orchestrator {
         }
     }
 
-    /// Multiplies two 3 by 3 matrices using a 3 by 3 SUMMA worker grid.
+    /// Multiplies two n by n matrices using a n by n SUMMA worker grid.
     ///
-    /// Workers 1 through 9 represent grid cells in row-major order: worker 1
+    /// Workers 1 through n*n represent grid cells in row-major order: worker 1
     /// owns C[0][0], worker 2 owns C[0][1], and so on. For each `k`, the
     /// orchestrator sends A[i][k] * B[k][j] to the worker that owns C[i][j].
     pub fn multiply_summa(
         &mut self,
-        a: [[u32; MATRIX_SIZE]; MATRIX_SIZE],
-        b: [[u32; MATRIX_SIZE]; MATRIX_SIZE],
-    ) -> Result<[[u32; MATRIX_SIZE]; MATRIX_SIZE], String> {
-        if self.matrix_size != MATRIX_SIZE {
-            return Err(format!(
-                "This SUMMA implementation supports matrix_size {MATRIX_SIZE}, got {}",
-                self.matrix_size
-            ));
-        }
-
+        a: Vec<Vec<u32>>,
+        b: Vec<Vec<u32>>,
+    ) -> Result<Vec<Vec<u32>>, String> {
         self.ensure_summa_grid()?;
-        self.result_matrix = [[0; MATRIX_SIZE]; MATRIX_SIZE];
+        self.result_matrix = vec![vec![0; self.matrix_size]; self.matrix_size];
         self.summa_assignments.clear();
 
         println!("SUMMA multiplication of {a:?} and {b:?}");
 
-        for k in 0..MATRIX_SIZE {
-            for i in 0..MATRIX_SIZE {
-                for j in 0..MATRIX_SIZE {
-                    let worker_id = (i * MATRIX_SIZE + j + 1) as u32;
-                    let task_id = (k * MATRIX_SIZE * MATRIX_SIZE + i * MATRIX_SIZE + j + 1) as u32;
+        for k in 0..self.matrix_size {
+            for i in 0..self.matrix_size {
+                for j in 0..self.matrix_size {
+                    let worker_id = (i * self.matrix_size + j + 1) as u32;
+                    let task_id =
+                        (k * self.matrix_size * self.matrix_size + i * self.matrix_size + j + 1)
+                            as u32;
                     self.dispatch_multiply_to_worker(worker_id, task_id, a[i][k], b[k][j], k)?;
                     self.summa_assignments.insert(task_id, (i, j));
                 }
@@ -164,11 +158,11 @@ impl Orchestrator {
             }
         }
 
-        Ok(self.result_matrix)
+        Ok(self.result_matrix.clone())
     }
 
     fn ensure_summa_grid(&self) -> Result<(), String> {
-        for worker_id in 1..=(MATRIX_SIZE * MATRIX_SIZE) as u32 {
+        for worker_id in 1..=(self.matrix_size * self.matrix_size) as u32 {
             if !self.workers.contains(&worker_id) {
                 return Err(format!("SUMMA worker {worker_id} is not registered"));
             }

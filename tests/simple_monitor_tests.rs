@@ -1,3 +1,4 @@
+use rcompute::components::app::to_vector;
 use rcompute::components::event::{EventPayload, MonitorEvent, Source};
 use rcompute::components::monitor::Monitor;
 use rcompute::components::orchestrator::Orchestrator;
@@ -25,8 +26,8 @@ fn monitor_records_orchestrator_and_worker_summa_events() {
 
     orchestrator
         .multiply_summa(
-            [[1, 2, 3], [4, 5, 6], [7, 8, 9]],
-            [[9, 8, 7], [6, 5, 4], [3, 2, 1]],
+            to_vector([[1, 2, 3], [4, 5, 6], [7, 8, 9]]),
+            to_vector([[9, 8, 7], [6, 5, 4], [3, 2, 1]]),
         )
         .unwrap();
 
