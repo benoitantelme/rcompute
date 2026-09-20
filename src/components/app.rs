@@ -48,7 +48,7 @@ impl Application {
         }
 
         let result = orchestrator.multiply_summa(a, b).unwrap();
-        self.results.insert(1, Ok(result));
+        self.results.insert(1, Ok(result.clone()));
         self.open_calculations.remove(&1);
 
         return result;
